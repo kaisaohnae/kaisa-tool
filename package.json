@@ -1,0 +1,31 @@
+{
+  "name": "kaisa-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 8888",
+    "build": "node scripts/copy-pdf-worker.mjs && next build",
+    "start": "npx --yes serve out -p 8888",
+    "lint": "next lint",
+    "postinstall": "node scripts/copy-pdf-worker.mjs"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "next": "16.2.9",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.296",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "prettier": "^3.6.2",
+    "typescript": "^5"
+  }
+}
