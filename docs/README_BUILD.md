@@ -12,7 +12,7 @@ npm run build   # → out/
 npm run build
 cd out
 touch .nojekyll
-echo 'tools.kaisa.co.kr' > CNAME
+echo 'tool.kaisa.co.kr' > CNAME
 git init
 git checkout -b main
 git add -A
