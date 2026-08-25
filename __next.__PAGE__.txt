@@ -1,6 +1,6 @@
 1:"$Sreact.fragment"
-2:I[22016,["/_next/static/chunks/1dmxktjgx5axw.js","/_next/static/chunks/14mrh2-p_w84d.js"],""]
-3:I[97367,["/_next/static/chunks/1dmxktjgx5axw.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+2:I[94990,["/_next/static/chunks/3hymb7upmdvy-.js","/_next/static/chunks/14mrh2-p_w84d.js","/_next/static/chunks/207dkr_zwet2m.js"],"default"]
+3:I[97367,["/_next/static/chunks/3hymb7upmdvy-.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
 4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"site-shell","children":["$","div",null,{"className":"site-shell__inner","children":["$","section",null,{"className":"home","children":[["$","h1",null,{"className":"home__title","children":"Tools"}],["$","p",null,{"className":"home__desc","children":"이미지와 PDF를 브라우저에서 바로 처리합니다. 파일은 서버로 보내지 않습니다."}],["$","div",null,{"className":"home__links","children":[["$","$L2","image",{"href":"/image/","className":"home__link","children":[["$","span",null,{"className":"home__link-label","children":"이미지"}],["$","span",null,{"className":"home__link-meta","children":"용량 줄이기, 리사이즈, 포맷 변환"}]]}],["$","$L2","pdf",{"href":"/pdf/","className":"home__link","children":[["$","span",null,{"className":"home__link-label","children":"PDF"}],["$","span",null,{"className":"home__link-meta","children":"압축, 합치기, 분할, 이미지 변환"}]]}]]}]]}]}]}],null,["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"49s_NM0eCgxmD_9ulq1Cw"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"href":"/image/compress/"}],[["$","script","script-0",{"src":"/_next/static/chunks/207dkr_zwet2m.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"1GvuyXJMaGI7dzzJOLtym"}
 5:null

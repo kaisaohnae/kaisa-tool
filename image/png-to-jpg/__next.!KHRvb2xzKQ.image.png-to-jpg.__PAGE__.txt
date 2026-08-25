@@ -1,6 +1,6 @@
 1:"$Sreact.fragment"
-2:I[28300,["/_next/static/chunks/1dmxktjgx5axw.js","/_next/static/chunks/14mrh2-p_w84d.js","/_next/static/chunks/13qasiaqj9hvi.js","/_next/static/chunks/412k1gss2zii8.js"],"default"]
-3:I[97367,["/_next/static/chunks/1dmxktjgx5axw.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+2:I[28300,["/_next/static/chunks/3hymb7upmdvy-.js","/_next/static/chunks/14mrh2-p_w84d.js","/_next/static/chunks/13qasiaqj9hvi.js","/_next/static/chunks/412k1gss2zii8.js"],"default"]
+3:I[97367,["/_next/static/chunks/3hymb7upmdvy-.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
 4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"title":"PNG → JPG","description":"PNG 이미지를 JPG로 변환합니다. 투명 배경은 흰색으로 처리됩니다.","accept":"image/png,.png","target":"image/jpeg","ext":"jpg"}],[["$","script","script-0",{"src":"/_next/static/chunks/412k1gss2zii8.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"49s_NM0eCgxmD_9ulq1Cw"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"title":"PNG → JPG","description":"PNG 이미지를 JPG로 변환합니다. 투명 배경은 흰색으로 처리됩니다.","accept":"image/png,.png","target":"image/jpeg","ext":"jpg"}],[["$","script","script-0",{"src":"/_next/static/chunks/412k1gss2zii8.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"1GvuyXJMaGI7dzzJOLtym"}
 5:null
