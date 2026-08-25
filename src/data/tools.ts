@@ -1,4 +1,4 @@
-export type ToolCategory = 'image' | 'pdf';
+export type ToolCategory = 'image' | 'pdf' | 'format' | 'edit';
 
 export interface ToolItem {
   id: string;
@@ -10,7 +10,9 @@ export interface ToolItem {
 
 export const TOOL_CATEGORIES: {id: ToolCategory; label: string; description: string}[] = [
   {id: 'image', label: '이미지', description: '용량 줄이기, 리사이즈, 포맷 변환'},
-  {id: 'pdf', label: 'PDF', description: '압축, 합치기, 분할, 이미지 변환'}
+  {id: 'pdf', label: 'PDF', description: '압축, 합치기, 분할, 이미지 변환'},
+  {id: 'format', label: 'FORMAT', description: 'JSON·SQL 정렬·유효성 검사'},
+  {id: 'edit', label: 'EDIT', description: '텍스트 비교·중복 제거'}
 ];
 
 export const TOOLS: ToolItem[] = [
@@ -83,6 +85,34 @@ export const TOOLS: ToolItem[] = [
     title: 'PDF → JPG',
     description: 'PDF 페이지를 JPG로 추출합니다.',
     href: '/pdf/pdf-to-jpg/'
+  },
+  {
+    id: 'format-json',
+    category: 'format',
+    title: 'JSON',
+    description: 'JSON 문자열을 정렬하고 유효성을 검사합니다.',
+    href: '/format/json/'
+  },
+  {
+    id: 'format-sql',
+    category: 'format',
+    title: 'SQL',
+    description: 'SQL 문을 정렬하고 패턴을 설정합니다.',
+    href: '/format/sql/'
+  },
+  {
+    id: 'edit-compare',
+    category: 'edit',
+    title: 'Compare',
+    description: '두 텍스트의 줄 단위 차이를 비교합니다.',
+    href: '/edit/compare/'
+  },
+  {
+    id: 'edit-dedupe',
+    category: 'edit',
+    title: '중복제거',
+    description: '중복된 줄을 제거합니다.',
+    href: '/edit/dedupe/'
   }
 ];
 

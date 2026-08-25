@@ -8,6 +8,7 @@ import '@/assets/css/styles.css';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import GoogleAnalytics from '@/components/layout/google-analytics';
+import GoogleAdsense from '@/components/layout/google-adsense';
 import ThemeProvider from '@/components/layout/theme-provider';
 import {THEME_STORAGE_KEY} from '@/store/use-theme-store';
 
@@ -38,13 +39,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
-      <GoogleAnalytics />
+      <head>
+        <GoogleAdsense />
+      </head>
       <body>
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=null;document.cookie.split(';').forEach(function(c){var p=c.trim().split('=');if(p[0]==='${THEME_STORAGE_KEY}')t=decodeURIComponent(p[1]||'');});document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`
           }}
         />
+        <GoogleAnalytics />
         <ThemeProvider />
         <Header />
         <main className="site-main">{children}</main>
