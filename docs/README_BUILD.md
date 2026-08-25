@@ -33,5 +33,5 @@ cd ..
 
 ```bash
 npm run build
-npm run start   # out/ 정적 서빙 (포트 8888)
+npm run start   # out/ 정적 서빙 (포트 8686)
 ```

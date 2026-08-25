@@ -3089,6 +3089,76 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "没有可复制的结果。",
     hi: "कॉपी करने के लिए परिणाम नहीं।"
   },
+  "Requests": {
+    ko: "요청사항",
+    zh: "需求反馈",
+    hi: "अनुरोध"
+  },
+  "Nickname": {
+    ko: "닉네임",
+    zh: "昵称",
+    hi: "उपनाम"
+  },
+  "Request": {
+    ko: "내용",
+    zh: "内容",
+    hi: "संदेश"
+  },
+  "Submit": {
+    ko: "등록",
+    zh: "提交",
+    hi: "भेजें"
+  },
+  "Submitting…": {
+    ko: "등록 중…",
+    zh: "提交中…",
+    hi: "भेजा जा रहा है…"
+  },
+  "No requests yet.": {
+    ko: "아직 요청사항이 없습니다.",
+    zh: "暂无需求。",
+    hi: "अभी कोई अनुरोध नहीं।"
+  },
+  "Request submitted.": {
+    ko: "요청사항이 등록되었습니다.",
+    zh: "已提交需求。",
+    hi: "अनुरोध भेज दिया गया।"
+  },
+  "Failed to load requests.": {
+    ko: "요청사항을 불러오지 못했습니다.",
+    zh: "无法加载需求。",
+    hi: "अनुरोध लोड नहीं हो सके।"
+  },
+  "Failed to submit request.": {
+    ko: "요청사항 등록에 실패했습니다.",
+    zh: "提交失败。",
+    hi: "अनुरोध भेजने में विफल।"
+  },
+  "Nickname and request are required.": {
+    ko: "닉네임과 내용을 입력해 주세요.",
+    zh: "请填写昵称和内容。",
+    hi: "उपनाम और संदेश आवश्यक हैं।"
+  },
+  "Complete the robot check.": {
+    ko: "로봇 방지 확인을 완료해 주세요.",
+    zh: "请完成人机验证。",
+    hi: "रोबोट जांच पूरी करें।"
+  },
+  "Reply": {
+    ko: "답글",
+    zh: "回复",
+    hi: "जवाब"
+  },
+  "Reply submitted.": {
+    ko: "답글이 등록되었습니다.",
+    zh: "已提交回复。",
+    hi: "जवाब भेज दिया गया।"
+  },
+  "Failed to submit reply.": {
+    ko: "답글 등록에 실패했습니다.",
+    zh: "回复提交失败。",
+    hi: "जवाब भेजने में विफल।"
+  },
 };
 
-export const DICTIONARY_KEY_COUNT = 617 as const;
+export const DICTIONARY_KEY_COUNT = 630 as const;

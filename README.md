@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-http://localhost:8888
+http://localhost:8686
 
 ## 빌드 / 배포
 

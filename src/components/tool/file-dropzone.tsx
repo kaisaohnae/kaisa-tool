@@ -1,8 +1,11 @@
 'use client';
 
 import {useCallback, useRef, useState, type DragEvent, type ReactNode} from 'react';
+import {usePathname} from 'next/navigation';
 import {filterAcceptedFiles, formatBytes} from '@/modules/shared/file';
+import {pathToToolKey} from '@/modules/shared/tool-key';
 import {useT} from '@/i18n/locale-context';
+import ToolRequestSection from '@/components/tool/tool-request-section';
 
 interface FileDropzoneProps {
   accept: string;
@@ -123,11 +126,15 @@ export default function FileDropzone({
 
 export function ToolPageShell({title, description, children}: {title: string; description: string; children: ReactNode}) {
   const t = useT();
+  const pathname = usePathname();
+  const toolKey = pathToToolKey(pathname);
+
   return (
     <article className="tool-page">
       <h1 className="tool-page__title">{t(title)}</h1>
       <p className="tool-page__desc">{t(description)}</p>
       <div className="tool-panel">{children}</div>
+      {toolKey ? <ToolRequestSection toolKey={toolKey} /> : null}
     </article>
   );
 }
