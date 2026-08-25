@@ -9,25 +9,41 @@ export default function JpgToPdfTool() {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
   const [result, setResult] = useState<Blob | null>(null);
 
   const run = async () => {
     if (!files.length) return;
     setBusy(true);
     setError('');
+    setStatus('준비 중…');
     try {
-      const blob = await jpgToPdf(files);
+      const blob = await jpgToPdf(files, setStatus);
       setResult(blob);
+      setStatus('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : '변환에 실패했습니다. JPG만 지원합니다.');
+      setResult(null);
+      setError(e instanceof Error ? e.message : '변환에 실패했습니다.');
+      setStatus('');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ToolPageShell title="JPG → PDF" description="JPG 이미지를 페이지로 넣어 PDF를 만듭니다. (JPG만 지원)">
-      <FileDropzone accept="image/jpeg,.jpg,.jpeg" multiple files={files} onChange={next => { setFiles(next); setResult(null); }} hint="JPG 여러 장 가능" />
+    <ToolPageShell title="JPG → PDF" description="JPG 이미지를 페이지로 넣어 PDF를 만듭니다. ↑↓로 페이지 순서를 바꿀 수 있습니다.">
+      <FileDropzone
+        accept="image/jpeg,.jpg,.jpeg"
+        multiple
+        sortable
+        files={files}
+        onChange={next => {
+          setFiles(next);
+          setResult(null);
+          setError('');
+        }}
+        hint="JPG 여러 장 가능"
+      />
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!files.length || busy} onClick={run}>
@@ -38,6 +54,7 @@ export default function JpgToPdfTool() {
             다운로드 ({formatBytes(result.size)})
           </button>
         ) : null}
+        {status ? <p className="tool-status">{status}</p> : null}
         {error ? <p className="tool-status tool-status--error">{error}</p> : null}
       </div>
     </ToolPageShell>

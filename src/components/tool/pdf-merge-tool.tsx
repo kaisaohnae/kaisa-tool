@@ -9,6 +9,7 @@ export default function PdfMergeTool() {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
   const [result, setResult] = useState<Blob | null>(null);
 
   const run = async () => {
@@ -18,19 +19,34 @@ export default function PdfMergeTool() {
     }
     setBusy(true);
     setError('');
+    setStatus('준비 중…');
     try {
-      const blob = await mergePdfs(files);
+      const blob = await mergePdfs(files, setStatus);
       setResult(blob);
+      setStatus('');
     } catch (e) {
+      setResult(null);
       setError(e instanceof Error ? e.message : '합치기에 실패했습니다.');
+      setStatus('');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ToolPageShell title="PDF 합치기" description="선택한 순서대로 PDF를 하나로 합칩니다.">
-      <FileDropzone accept="application/pdf,.pdf" multiple files={files} onChange={next => { setFiles(next); setResult(null); }} hint="PDF 여러 개" />
+    <ToolPageShell title="PDF 합치기" description="선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.">
+      <FileDropzone
+        accept="application/pdf,.pdf"
+        multiple
+        sortable
+        files={files}
+        onChange={next => {
+          setFiles(next);
+          setResult(null);
+          setError('');
+        }}
+        hint="PDF 여러 개"
+      />
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={files.length < 2 || busy} onClick={run}>
@@ -41,6 +57,7 @@ export default function PdfMergeTool() {
             다운로드 ({formatBytes(result.size)})
           </button>
         ) : null}
+        {status ? <p className="tool-status">{status}</p> : null}
         {error ? <p className="tool-status tool-status--error">{error}</p> : null}
       </div>
     </ToolPageShell>

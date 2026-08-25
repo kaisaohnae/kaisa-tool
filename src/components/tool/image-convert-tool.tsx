@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useObjectUrl} from '@/hooks/use-object-url';
 import {convertImage} from '@/modules/image';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
@@ -21,6 +22,7 @@ export default function ImageConvertTool({title, description, accept, target, ex
   const [result, setResult] = useState<{blob: Blob; name: string} | null>(null);
 
   const file = files[0];
+  const resultUrl = useObjectUrl(result?.blob);
 
   const run = async () => {
     if (!file) return;
@@ -30,6 +32,7 @@ export default function ImageConvertTool({title, description, accept, target, ex
       const blob = await convertImage(file, target, quality);
       setResult({blob, name: replaceExtension(file.name, ext)});
     } catch (e) {
+      setResult(null);
       setError(e instanceof Error ? e.message : '처리에 실패했습니다.');
     } finally {
       setBusy(false);
@@ -38,13 +41,32 @@ export default function ImageConvertTool({title, description, accept, target, ex
 
   return (
     <ToolPageShell title={title} description={description}>
-      <FileDropzone accept={accept} files={files} onChange={next => { setFiles(next); setResult(null); }} />
+      <FileDropzone
+        accept={accept}
+        files={files}
+        onChange={next => {
+          setFiles(next);
+          setResult(null);
+          setError('');
+        }}
+      />
 
       {target === 'image/jpeg' ? (
         <div className="tool-controls">
           <label className="field">
             <span className="field__label">JPG 품질 {Math.round(quality * 100)}%</span>
-            <input className="field__range" type="range" min={0.1} max={1} step={0.05} value={quality} onChange={e => setQuality(Number(e.target.value))} />
+            <input
+              className="field__range"
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={quality}
+              onChange={e => {
+                setQuality(Number(e.target.value));
+                setResult(null);
+              }}
+            />
           </label>
         </div>
       ) : null}
@@ -60,6 +82,15 @@ export default function ImageConvertTool({title, description, accept, target, ex
         ) : null}
         {error ? <p className="tool-status tool-status--error">{error}</p> : null}
       </div>
+
+      {result && resultUrl ? (
+        <div className="preview-box">
+          <img src={resultUrl} alt="결과 미리보기" />
+          <div className="preview-meta">
+            <span>{formatBytes(result.blob.size)}</span>
+          </div>
+        </div>
+      ) : null}
     </ToolPageShell>
   );
 }

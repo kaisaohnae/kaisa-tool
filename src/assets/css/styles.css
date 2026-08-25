@@ -505,6 +505,17 @@ body {
   color: var(--color-accent);
 }
 
+.file-list__remove:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.file-list__order {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .tool-controls {
   display: flex;
   flex-wrap: wrap;

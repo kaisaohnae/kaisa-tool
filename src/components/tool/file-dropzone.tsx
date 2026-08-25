@@ -1,28 +1,50 @@
 'use client';
 
 import {useCallback, useRef, useState, type DragEvent, type ReactNode} from 'react';
+import {filterAcceptedFiles, formatBytes} from '@/modules/shared/file';
 
 interface FileDropzoneProps {
   accept: string;
   multiple?: boolean;
+  sortable?: boolean;
   files: File[];
   onChange: (files: File[]) => void;
   title?: string;
   hint?: string;
 }
 
-export default function FileDropzone({accept, multiple = false, files, onChange, title = '파일을 끌어다 놓거나 클릭', hint}: FileDropzoneProps) {
+export default function FileDropzone({
+  accept,
+  multiple = false,
+  sortable = false,
+  files,
+  onChange,
+  title = '파일을 끌어다 놓거나 클릭',
+  hint
+}: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(false);
+  const [rejectHint, setRejectHint] = useState('');
 
   const addFiles = useCallback(
     (list: FileList | File[]) => {
-      const next = Array.from(list);
-      if (!next.length) return;
-      onChange(multiple ? [...files, ...next] : [next[0]]);
+      const accepted = filterAcceptedFiles(list, accept);
+      const rejected = Array.from(list).length - accepted.length;
+      setRejectHint(rejected > 0 ? `지원하지 않는 파일 ${rejected}개를 제외했습니다.` : '');
+      if (!accepted.length) return;
+      onChange(multiple ? [...files, ...accepted] : [accepted[0]]);
     },
-    [files, multiple, onChange]
+    [accept, files, multiple, onChange]
   );
+
+  const move = (index: number, dir: -1 | 1) => {
+    const next = index + dir;
+    if (next < 0 || next >= files.length) return;
+    const copy = [...files];
+    const [item] = copy.splice(index, 1);
+    copy.splice(next, 0, item);
+    onChange(copy);
+  };
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -57,12 +79,27 @@ export default function FileDropzone({accept, multiple = false, files, onChange,
         />
       </div>
 
+      {rejectHint ? <p className="tool-status">{rejectHint}</p> : null}
+
       {files.length > 0 ? (
         <div className="file-list" style={{marginTop: 12}}>
           {files.map((file, index) => (
-            <div key={`${file.name}-${file.size}-${index}`} className="file-list__item">
-              <span className="file-list__name">{file.name}</span>
-              <span className="file-list__meta">{(file.size / 1024).toFixed(1)} KB</span>
+            <div key={`${file.name}-${file.size}-${file.lastModified}-${index}`} className="file-list__item">
+              <span className="file-list__name">
+                {sortable ? `${index + 1}. ` : ''}
+                {file.name}
+              </span>
+              <span className="file-list__meta">{formatBytes(file.size)}</span>
+              {sortable ? (
+                <span className="file-list__order">
+                  <button type="button" className="file-list__remove" disabled={index === 0} onClick={e => { e.stopPropagation(); move(index, -1); }}>
+                    ↑
+                  </button>
+                  <button type="button" className="file-list__remove" disabled={index === files.length - 1} onClick={e => { e.stopPropagation(); move(index, 1); }}>
+                    ↓
+                  </button>
+                </span>
+              ) : null}
               <button
                 type="button"
                 className="file-list__remove"
