@@ -2,10 +2,13 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
+import {translateProgress} from '@/i18n/translate';
 import {pdfToJpg, zipFiles} from '@/modules/pdf';
 import {downloadBlob, formatBytes} from '@/modules/shared/file';
 
 export default function PdfToJpgTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState(0.85);
   const [busy, setBusy] = useState(false);
@@ -19,16 +22,16 @@ export default function PdfToJpgTool() {
     if (!file) return;
     setBusy(true);
     setError('');
-    setStatus('준비 중…');
+    setStatus('Preparing…');
     try {
-      const pages = await pdfToJpg(file, quality, 2, setStatus);
-      setStatus('ZIP 만드는 중…');
-      const zip = await zipFiles(pages);
-      setResult({blob: zip, count: pages.length});
+      const images = await pdfToJpg(file, quality, 2, setStatus);
+      setStatus('Creating ZIP…');
+      const blob = await zipFiles(images);
+      setResult({blob, count: images.length});
       setStatus('');
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '변환에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Conversion failed.');
       setStatus('');
     } finally {
       setBusy(false);
@@ -36,7 +39,7 @@ export default function PdfToJpgTool() {
   };
 
   return (
-    <ToolPageShell title="PDF → JPG" description="각 페이지를 JPG로 추출해 ZIP으로 받습니다.">
+    <ToolPageShell title="PDF → JPG" description="Extract each page as JPG and download a ZIP.">
       <FileDropzone
         accept="application/pdf,.pdf"
         files={files}
@@ -45,16 +48,18 @@ export default function PdfToJpgTool() {
           setResult(null);
           setError('');
         }}
-        hint="PDF 1개"
+        hint="1 PDF"
       />
 
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">JPG 품질 {Math.round(quality * 100)}%</span>
+          <span className="field__label">
+            {t('JPG quality')} {Math.round(quality * 100)}%
+          </span>
           <input
             className="field__range"
             type="range"
-            min={0.4}
+            min={0.1}
             max={1}
             step={0.05}
             value={quality}
@@ -68,19 +73,19 @@ export default function PdfToJpgTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '변환 중…' : 'JPG로 변환'}
+          {busy ? t('Converting…') : t('Convert to JPG')}
         </button>
         {result ? (
           <button
             type="button"
             className="btn btn--ghost"
-            onClick={() => downloadBlob(result.blob, `${file?.name.replace(/\.pdf$/i, '') || 'pdf'}-jpg.zip`)}
+            onClick={() => downloadBlob(result.blob, 'pdf-pages.zip')}
           >
-            ZIP 다운로드 ({result.count}장 · {formatBytes(result.blob.size)})
+            {t('Download ZIP')} ({result.count} · {formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {status ? <p className="tool-status">{status}</p> : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {status ? <p className="tool-status">{translateProgress(status, t)}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
     </ToolPageShell>
   );

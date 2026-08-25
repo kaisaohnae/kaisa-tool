@@ -5,16 +5,19 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import IconLogo from '@/components/icons/icon-logo';
 import ThemeToggle from '@/components/layout/theme-toggle';
+import {useT} from '@/i18n/locale-context';
 
 const MENU_ITEMS = [
-  {href: '/image/compress/', label: '이미지', match: '/image'},
+  {href: '/image/compress/', label: 'Image', match: '/image'},
   {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
   {href: '/format/json/', label: 'FORMAT', match: '/format'},
-  {href: '/edit/compare/', label: 'EDIT', match: '/edit'}
+  {href: '/edit/compare/', label: 'EDIT', match: '/edit'},
+  {href: '/util/password/', label: 'UTIL', match: '/util'}
 ];
 
 export default function Header() {
   const pathname = usePathname();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const navId = useId();
   const headerRef = useRef<HTMLElement>(null);
@@ -38,7 +41,7 @@ export default function Header() {
     return (
       <li key={item.href} className={isActive ? 'menu__item menu__item--active' : 'menu__item'}>
         <Link href={item.href} className="menu__link" aria-current={isActive ? 'page' : undefined}>
-          {item.label}
+          {t(item.label)}
         </Link>
       </li>
     );
@@ -50,7 +53,7 @@ export default function Header() {
       className={open ? 'menu__toggle menu__toggle--open' : 'menu__toggle'}
       aria-expanded={open}
       aria-controls={navId}
-      aria-label={open ? '메뉴 접기' : '메뉴 펼치기'}
+      aria-label={open ? t('Close menu') : t('Open menu')}
       onClick={() => setOpen(v => !v)}
     >
       <span className="menu__toggle-icon" aria-hidden="true">
@@ -75,7 +78,7 @@ export default function Header() {
             </Link>
           </h1>
           <div className="header__actions">
-            <nav className="menu menu--desktop" aria-label="Main navigation">
+            <nav className="menu menu--desktop" aria-label={t('Main navigation')}>
               <ul className="menu__list">{items}</ul>
             </nav>
             <ThemeToggle />
@@ -83,7 +86,7 @@ export default function Header() {
           </div>
         </div>
 
-        <nav id={navId} className="header__nav" aria-label="Mobile navigation" hidden={!open}>
+        <nav id={navId} className="header__nav" aria-label={t('Mobile navigation')} hidden={!open}>
           <div className="site-shell__inner header__nav-inner">
             <ul className="menu__list menu__list--mobile">{items}</ul>
           </div>

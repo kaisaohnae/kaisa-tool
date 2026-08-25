@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {getToolsByCategory, type ToolCategory} from '@/data/tools';
+import {useT} from '@/i18n/locale-context';
 
 export default function CategorySubnav({category}: {category: ToolCategory}) {
   const pathname = usePathname();
+  const t = useT();
   const tools = getToolsByCategory(category);
 
   return (
@@ -19,7 +21,7 @@ export default function CategorySubnav({category}: {category: ToolCategory}) {
               return (
                 <li key={tool.id}>
                   <Link href={tool.href} className={active ? 'subnav__link subnav__link--active' : 'subnav__link'}>
-                    {tool.title}
+                    {t(tool.title)}
                   </Link>
                 </li>
               );

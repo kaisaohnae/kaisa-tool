@@ -3,10 +3,12 @@
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
 import {useObjectUrl} from '@/hooks/use-object-url';
+import {useT} from '@/i18n/locale-context';
 import {compressImage} from '@/modules/image';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
 export default function ImageCompressTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState(0.7);
   const [busy, setBusy] = useState(false);
@@ -23,19 +25,22 @@ export default function ImageCompressTool() {
     try {
       const blob = await compressImage(file, quality);
       if (blob.size >= file.size && quality >= 0.85) {
-        setError('원본보다 작아지지 않았습니다. 품질을 더 낮춰 보세요.');
+        setError('Did not get smaller than the original. Try a lower quality.');
       }
       setResult({blob, name: replaceExtension(file.name, 'jpg')});
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '처리에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Processing failed.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ToolPageShell title="이미지 용량 줄이기" description="품질을 낮춰 JPEG로 다시 저장합니다. 투명 배경은 흰색으로 처리되며, 파일은 브라우저에서만 처리됩니다.">
+    <ToolPageShell
+      title="Compress"
+      description="Lower quality and re-save as JPEG. Transparent backgrounds become white. Files stay in your browser."
+    >
       <FileDropzone
         accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
         files={files}
@@ -49,7 +54,9 @@ export default function ImageCompressTool() {
 
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">품질 {Math.round(quality * 100)}%</span>
+          <span className="field__label">
+            {t('Quality')} {Math.round(quality * 100)}%
+          </span>
           <input
             className="field__range"
             type="range"
@@ -67,22 +74,26 @@ export default function ImageCompressTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '처리 중…' : '용량 줄이기'}
+          {busy ? t('Processing…') : t('Compress')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result.blob, result.name)}>
-            다운로드 ({formatBytes(result.blob.size)})
+            {t('Download')} ({formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
 
       {file && result ? (
         <div className="preview-box">
-          {resultUrl ? <img src={resultUrl} alt="결과 미리보기" /> : null}
+          {resultUrl ? <img src={resultUrl} alt={t('Result preview')} /> : null}
           <div className="preview-meta">
-            <span>원본 {formatBytes(file.size)}</span>
-            <span>결과 {formatBytes(result.blob.size)}</span>
+            <span>
+              {t('Original')} {formatBytes(file.size)}
+            </span>
+            <span>
+              {t('Result')} {formatBytes(result.blob.size)}
+            </span>
             <span>{Math.max(1, Math.round((result.blob.size / file.size) * 100))}%</span>
           </div>
         </div>

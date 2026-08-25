@@ -3,10 +3,12 @@
 import {useEffect, useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
 import {useObjectUrl} from '@/hooks/use-object-url';
+import {useT} from '@/i18n/locale-context';
 import {detectOutputMime, getImageSize, resizeImage} from '@/modules/image';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
 export default function ImageResizeTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [width, setWidth] = useState(800);
   const [height, setHeight] = useState(600);
@@ -34,7 +36,7 @@ export default function ImageResizeTool() {
         setError('');
       })
       .catch(e => {
-        if (!cancelled) setError(e instanceof Error ? e.message : '이미지 정보를 읽지 못했습니다.');
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not read image info.');
       });
     return () => {
       cancelled = true;
@@ -64,14 +66,14 @@ export default function ImageResizeTool() {
       setResult({blob, name: replaceExtension(file.name, format === 'image/png' ? 'png' : 'jpg')});
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '처리에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Processing failed.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ToolPageShell title="이미지 사이즈 변경" description="가로·세로 픽셀 크기를 변경합니다. 최대 8192px까지 지원합니다.">
+    <ToolPageShell title="Resize" description="Change width and height in pixels. Supports up to 8192px.">
       <FileDropzone
         accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
         files={files}
@@ -85,15 +87,15 @@ export default function ImageResizeTool() {
 
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">가로 (px)</span>
+          <span className="field__label">{t('Width (px)')}</span>
           <input className="field__input" type="number" min={1} max={8192} value={width} onChange={e => onWidth(Number(e.target.value) || 1)} />
         </label>
         <label className="field">
-          <span className="field__label">세로 (px)</span>
+          <span className="field__label">{t('Height (px)')}</span>
           <input className="field__input" type="number" min={1} max={8192} value={height} onChange={e => onHeight(Number(e.target.value) || 1)} />
         </label>
         <label className="field">
-          <span className="field__label">저장 형식</span>
+          <span className="field__label">{t('Output format')}</span>
           <select
             className="field__select"
             value={format}
@@ -108,25 +110,25 @@ export default function ImageResizeTool() {
         </label>
         <label className="field" style={{flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 'auto'}}>
           <input type="checkbox" checked={lock} onChange={e => setLock(e.target.checked)} />
-          <span className="field__label">비율 유지</span>
+          <span className="field__label">{t('Keep aspect ratio')}</span>
         </label>
       </div>
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '처리 중…' : '사이즈 변경'}
+          {busy ? t('Processing…') : t('Resize')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result.blob, result.name)}>
-            다운로드 ({formatBytes(result.blob.size)})
+            {t('Download')} ({formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
 
       {result && resultUrl ? (
         <div className="preview-box">
-          <img src={resultUrl} alt="결과 미리보기" />
+          <img src={resultUrl} alt={t('Result preview')} />
           <div className="preview-meta">
             <span>
               {width} × {height}

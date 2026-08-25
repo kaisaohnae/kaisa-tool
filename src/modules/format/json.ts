@@ -28,7 +28,7 @@ function sortValue(value: unknown): unknown {
 export function formatAndValidateJson(input: string, options: JsonFormatOptions = {indent: '2', sortKeys: false}): JsonCheckResult {
   const raw = input.replace(/^\uFEFF/, '').trim();
   if (!raw) {
-    return {ok: false, error: '내용을 입력하세요.'};
+    return {ok: false, error: 'Enter text.'};
   }
 
   try {
@@ -37,7 +37,7 @@ export function formatAndValidateJson(input: string, options: JsonFormatOptions 
     const formatted = JSON.stringify(value, null, indentChars(options.indent));
     return {ok: true, value, formatted};
   } catch (e) {
-    const message = e instanceof Error ? e.message : '유효하지 않은 JSON입니다.';
+    const message = e instanceof Error ? e.message : 'Invalid JSON.';
     const match = /position\s+(\d+)/i.exec(message) || /at position\s+(\d+)/i.exec(message);
     if (match) {
       const pos = Number(match[1]);

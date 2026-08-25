@@ -2,10 +2,13 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
+import {translateProgress} from '@/i18n/translate';
 import {splitPdf, zipFiles} from '@/modules/pdf';
 import {downloadBlob, formatBytes} from '@/modules/shared/file';
 
 export default function PdfSplitTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -18,16 +21,16 @@ export default function PdfSplitTool() {
     if (!file) return;
     setBusy(true);
     setError('');
-    setStatus('준비 중…');
+    setStatus('Preparing…');
     try {
-      const pages = await splitPdf(file, setStatus);
-      setStatus('ZIP 만드는 중…');
-      const zip = await zipFiles(pages);
-      setResult({blob: zip, count: pages.length});
+      const parts = await splitPdf(file, setStatus);
+      setStatus('Creating ZIP…');
+      const blob = await zipFiles(parts);
+      setResult({blob, count: parts.length});
       setStatus('');
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '분할에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Split failed.');
       setStatus('');
     } finally {
       setBusy(false);
@@ -35,7 +38,7 @@ export default function PdfSplitTool() {
   };
 
   return (
-    <ToolPageShell title="PDF 분할" description="페이지마다 개별 PDF로 나눠 ZIP으로 받습니다.">
+    <ToolPageShell title="Split PDF" description="Split a PDF by pages.">
       <FileDropzone
         accept="application/pdf,.pdf"
         files={files}
@@ -44,24 +47,24 @@ export default function PdfSplitTool() {
           setResult(null);
           setError('');
         }}
-        hint="PDF 1개"
+        hint="1 PDF"
       />
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '분할 중…' : '분할'}
+          {busy ? t('Splitting…') : t('Split')}
         </button>
         {result ? (
           <button
             type="button"
             className="btn btn--ghost"
-            onClick={() => downloadBlob(result.blob, `${file?.name.replace(/\.pdf$/i, '') || 'split'}-pages.zip`)}
+            onClick={() => downloadBlob(result.blob, 'split-pages.zip')}
           >
-            ZIP 다운로드 ({result.count}페이지 · {formatBytes(result.blob.size)})
+            {t('Download ZIP')} ({result.count} {t('Page')} · {formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {status ? <p className="tool-status">{status}</p> : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {status ? <p className="tool-status">{translateProgress(status, t)}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
     </ToolPageShell>
   );

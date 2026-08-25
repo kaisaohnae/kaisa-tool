@@ -2,10 +2,13 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
+import {translateProgress} from '@/i18n/translate';
 import {mergePdfs} from '@/modules/pdf';
 import {downloadBlob, formatBytes} from '@/modules/shared/file';
 
 export default function PdfMergeTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -14,19 +17,19 @@ export default function PdfMergeTool() {
 
   const run = async () => {
     if (files.length < 2) {
-      setError('PDF를 2개 이상 선택하세요.');
+      setError('Select at least 2 PDF files.');
       return;
     }
     setBusy(true);
     setError('');
-    setStatus('준비 중…');
+    setStatus('Preparing…');
     try {
       const blob = await mergePdfs(files, setStatus);
       setResult(blob);
       setStatus('');
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '합치기에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Merge failed.');
       setStatus('');
     } finally {
       setBusy(false);
@@ -34,7 +37,7 @@ export default function PdfMergeTool() {
   };
 
   return (
-    <ToolPageShell title="PDF 합치기" description="선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.">
+    <ToolPageShell title="Merge PDF" description="Combine PDFs in the selected order. Use ↑↓ to reorder.">
       <FileDropzone
         accept="application/pdf,.pdf"
         multiple
@@ -45,20 +48,20 @@ export default function PdfMergeTool() {
           setResult(null);
           setError('');
         }}
-        hint="PDF 여러 개"
+        hint="Multiple PDFs"
       />
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={files.length < 2 || busy} onClick={run}>
-          {busy ? '합치는 중…' : '합치기'}
+          {busy ? t('Merging…') : t('Merge')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result, 'merged.pdf')}>
-            다운로드 ({formatBytes(result.size)})
+            {t('Download')} ({formatBytes(result.size)})
           </button>
         ) : null}
-        {status ? <p className="tool-status">{status}</p> : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {status ? <p className="tool-status">{translateProgress(status, t)}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
     </ToolPageShell>
   );

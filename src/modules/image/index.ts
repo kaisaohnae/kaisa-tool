@@ -24,7 +24,7 @@ export async function resizeImage(
   mime: 'image/jpeg' | 'image/png' = 'image/jpeg',
   quality = 0.92
 ): Promise<Blob> {
-  if (width < 1 || height < 1) throw new Error('가로·세로는 1 이상이어야 합니다.');
+  if (width < 1 || height < 1) throw new Error('Width and height must be at least 1.');
   const img = await loadImageFromFile(file);
   try {
     const canvas = drawImageToCanvas(img, width, height);

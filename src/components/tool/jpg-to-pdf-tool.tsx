@@ -2,10 +2,13 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
+import {translateProgress} from '@/i18n/translate';
 import {jpgToPdf} from '@/modules/pdf';
 import {downloadBlob, formatBytes} from '@/modules/shared/file';
 
 export default function JpgToPdfTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -16,14 +19,14 @@ export default function JpgToPdfTool() {
     if (!files.length) return;
     setBusy(true);
     setError('');
-    setStatus('준비 중…');
+    setStatus('Preparing…');
     try {
       const blob = await jpgToPdf(files, setStatus);
       setResult(blob);
       setStatus('');
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '변환에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Conversion failed.');
       setStatus('');
     } finally {
       setBusy(false);
@@ -31,7 +34,7 @@ export default function JpgToPdfTool() {
   };
 
   return (
-    <ToolPageShell title="JPG → PDF" description="JPG 이미지를 페이지로 넣어 PDF를 만듭니다. ↑↓로 페이지 순서를 바꿀 수 있습니다.">
+    <ToolPageShell title="JPG → PDF" description="Put JPG images as pages into a PDF. Use ↑↓ to reorder.">
       <FileDropzone
         accept="image/jpeg,.jpg,.jpeg"
         multiple
@@ -42,20 +45,20 @@ export default function JpgToPdfTool() {
           setResult(null);
           setError('');
         }}
-        hint="JPG 여러 장 가능"
+        hint="Multiple JPGs allowed"
       />
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!files.length || busy} onClick={run}>
-          {busy ? '변환 중…' : 'PDF 만들기'}
+          {busy ? t('Converting…') : t('Create PDF')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result, 'images.pdf')}>
-            다운로드 ({formatBytes(result.size)})
+            {t('Download')} ({formatBytes(result.size)})
           </button>
         ) : null}
-        {status ? <p className="tool-status">{status}</p> : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {status ? <p className="tool-status">{translateProgress(status, t)}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
     </ToolPageShell>
   );

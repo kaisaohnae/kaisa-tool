@@ -30,7 +30,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: 
     canvas.toBlob(
       blob => {
         if (!blob) {
-          reject(new Error('이미지 변환에 실패했습니다.'));
+          reject(new Error('Image conversion failed.'));
           return;
         }
         resolve(blob);
@@ -62,7 +62,7 @@ export function getLoadedSize(img: LoadedImage): {width: number; height: number}
 
 export async function loadImageFromFile(file: File): Promise<LoadedImage> {
   if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name)) {
-    throw new Error('이미지 파일이 아닙니다.');
+    throw new Error('Not an image file.');
   }
 
   if (typeof createImageBitmap === 'function') {
@@ -82,7 +82,7 @@ export async function loadImageFromFile(file: File): Promise<LoadedImage> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('이미지를 불러오지 못했습니다.'));
+      reject(new Error('Could not load image.'));
     };
     img.src = url;
   });
@@ -101,7 +101,7 @@ export function drawImageToCanvas(img: LoadedImage, width?: number, height?: num
   canvas.width = size.width;
   canvas.height = size.height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas를 사용할 수 없습니다.');
+  if (!ctx) throw new Error('Canvas is not available.');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -113,7 +113,7 @@ export function flattenOnWhite(source: HTMLCanvasElement): HTMLCanvasElement {
   tmp.width = source.width;
   tmp.height = source.height;
   const ctx = tmp.getContext('2d');
-  if (!ctx) throw new Error('Canvas를 사용할 수 없습니다.');
+  if (!ctx) throw new Error('Canvas is not available.');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, tmp.width, tmp.height);
   ctx.drawImage(source, 0, 0);
@@ -121,7 +121,7 @@ export function flattenOnWhite(source: HTMLCanvasElement): HTMLCanvasElement {
 }
 
 export function matchesAccept(file: File, accept: string): boolean {
-  if (!accept || accept === '*/*') return true;
+  if (!accept || accept === '*' || accept === '*/*') return true;
   const tokens = accept.split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
   const name = file.name.toLowerCase();
   const type = (file.type || '').toLowerCase();

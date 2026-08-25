@@ -2,63 +2,65 @@
 
 import {useMemo, useState} from 'react';
 import {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
 import {formatAndValidateJson, minifyJson, type JsonIndentStyle} from '@/modules/format/json';
 
 export default function JsonFormatTool() {
+  const t = useT();
   const [input, setInput] = useState('');
   const [indent, setIndent] = useState<JsonIndentStyle>('2');
   const [sortKeys, setSortKeys] = useState(false);
   const [output, setOutput] = useState('');
-  const [message, setMessage] = useState<{type: 'ok' | 'error'; text: string} | null>(null);
+  const [message, setMessage] = useState<{type: 'ok' | 'error'; text: string; detail?: string} | null>(null);
 
   const charCount = useMemo(() => input.length, [input]);
   const options = useMemo(() => ({indent, sortKeys}), [indent, sortKeys]);
 
+  const errorDetail = (line?: number, column?: number) =>
+    line ? ` (${t('line')} ${line}, ${t('column')} ${column})` : undefined;
+
   const validateOnly = () => {
     const result = formatAndValidateJson(input, options);
     if (result.ok) {
-      setMessage({type: 'ok', text: '유효한 JSON입니다.'});
+      setMessage({type: 'ok', text: 'Valid JSON.'});
       return;
     }
-    const loc = result.line ? ` (줄 ${result.line}, 열 ${result.column})` : '';
-    setMessage({type: 'error', text: `${result.error}${loc}`});
+    setMessage({type: 'error', text: result.error, detail: errorDetail(result.line, result.column)});
   };
 
   const format = () => {
     const result = formatAndValidateJson(input, options);
     if (!result.ok) {
-      const loc = result.line ? ` (줄 ${result.line}, 열 ${result.column})` : '';
-      setMessage({type: 'error', text: `${result.error}${loc}`});
+      setMessage({type: 'error', text: result.error, detail: errorDetail(result.line, result.column)});
       return;
     }
     setInput(result.formatted);
     setOutput(result.formatted);
-    setMessage({type: 'ok', text: sortKeys ? '키 정렬 후 포맷했습니다.' : '정렬했습니다.'});
+    setMessage({type: 'ok', text: sortKeys ? 'Formatted with sorted keys.' : 'Formatted.'});
   };
 
   const minify = () => {
     const result = minifyJson(input, sortKeys);
     if (!result.ok) {
-      const loc = result.line ? ` (줄 ${result.line}, 열 ${result.column})` : '';
-      setMessage({type: 'error', text: `${result.error}${loc}`});
+      setMessage({type: 'error', text: result.error, detail: errorDetail(result.line, result.column)});
       return;
     }
     setInput(result.formatted);
     setOutput(result.formatted);
-    setMessage({type: 'ok', text: '한 줄로 압축했습니다.'});
+    setMessage({type: 'ok', text: 'Minified.'});
   };
 
   const copy = async () => {
     const text = output || input;
     if (!text.trim()) {
-      setMessage({type: 'error', text: '복사할 내용이 없습니다.'});
+      setMessage({type: 'error', text: 'No content to copy.'});
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setMessage({type: 'ok', text: '클립보드에 복사했습니다.'});
+      setMessage({type: 'ok', text: 'Copied to clipboard.'});
     } catch {
-      setMessage({type: 'error', text: '복사에 실패했습니다.'});
+      setMessage({type: 'error', text: 'Copy failed.'});
     }
   };
 
@@ -69,10 +71,10 @@ export default function JsonFormatTool() {
   };
 
   return (
-    <ToolPageShell title="JSON" description="문자열을 붙여 넣고 유효성을 검사하거나, 정렬 패턴에 맞게 포맷합니다.">
+    <ToolPageShell title="JSON" description="Paste a string to validate or format JSON with your preferred style.">
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">들여쓰기</span>
+          <span className="field__label">{t('Indent')}</span>
           <select
             className="field__select"
             value={indent}
@@ -95,13 +97,15 @@ export default function JsonFormatTool() {
               setMessage(null);
             }}
           />
-          <span className="field__label">키 알파벳 정렬</span>
+          <span className="field__label">{t('Sort keys')}</span>
         </label>
-        <p className="tool-status">{charCount.toLocaleString()}자</p>
+        <p className="tool-status">
+          {charCount.toLocaleString()} {t('Characters')}
+        </p>
       </div>
 
       <label className="field field--block">
-        <span className="field__label">입력</span>
+        <span className="field__label">{t('Input')}</span>
         <textarea
           className="field__textarea"
           value={input}
@@ -117,21 +121,26 @@ export default function JsonFormatTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" onClick={format} disabled={!input.trim()}>
-          정렬
+          {t('Format')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={validateOnly} disabled={!input.trim()}>
-          유효 체크
+          {t('Validate')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={minify} disabled={!input.trim()}>
-          압축
+          {t('Minify')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={copy} disabled={!input.trim() && !output.trim()}>
-          복사
+          {t('Copy')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={clear} disabled={!input && !output}>
-          비우기
+          {t('Clear')}
         </button>
-        {message ? <p className={`tool-status${message.type === 'error' ? ' tool-status--error' : ' tool-status--ok'}`}>{message.text}</p> : null}
+        {message ? (
+          <p className={`tool-status${message.type === 'error' ? ' tool-status--error' : ' tool-status--ok'}`}>
+            {t(message.text)}
+            {message.detail}
+          </p>
+        ) : null}
       </div>
     </ToolPageShell>
   );

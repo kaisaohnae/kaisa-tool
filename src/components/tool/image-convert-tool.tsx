@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
 import {useObjectUrl} from '@/hooks/use-object-url';
+import {useT} from '@/i18n/locale-context';
 import {convertImage} from '@/modules/image';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function ImageConvertTool({title, description, accept, target, ext}: Props) {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState(0.92);
   const [busy, setBusy] = useState(false);
@@ -33,7 +35,7 @@ export default function ImageConvertTool({title, description, accept, target, ex
       setResult({blob, name: replaceExtension(file.name, ext)});
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '처리에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Processing failed.');
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,9 @@ export default function ImageConvertTool({title, description, accept, target, ex
       {target === 'image/jpeg' ? (
         <div className="tool-controls">
           <label className="field">
-            <span className="field__label">JPG 품질 {Math.round(quality * 100)}%</span>
+            <span className="field__label">
+              {t('JPG quality')} {Math.round(quality * 100)}%
+            </span>
             <input
               className="field__range"
               type="range"
@@ -73,19 +77,19 @@ export default function ImageConvertTool({title, description, accept, target, ex
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '변환 중…' : '변환'}
+          {busy ? t('Converting…') : t('Convert')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result.blob, result.name)}>
-            다운로드 ({formatBytes(result.blob.size)})
+            {t('Download')} ({formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
 
       {result && resultUrl ? (
         <div className="preview-box">
-          <img src={resultUrl} alt="결과 미리보기" />
+          <img src={resultUrl} alt={t('Result preview')} />
           <div className="preview-meta">
             <span>{formatBytes(result.blob.size)}</span>
           </div>

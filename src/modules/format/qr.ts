@@ -34,7 +34,7 @@ function toQrCodeOptions(options: QrOptions) {
 export async function generateQrDataUrl(text: string, options: QrOptions): Promise<string> {
   const trimmed = text.trim();
   if (!trimmed) {
-    throw new Error('내용을 입력하세요.');
+    throw new Error('Enter text.');
   }
   return QRCode.toDataURL(trimmed, toQrCodeOptions(options));
 }

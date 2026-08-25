@@ -2,6 +2,7 @@
 
 import {useMemo, useState} from 'react';
 import {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
 import {
   DEFAULT_SQL_OPTIONS,
   formatSql,
@@ -13,6 +14,7 @@ import {
 } from '@/modules/format/sql';
 
 export default function SqlFormatTool() {
+  const t = useT();
   const [input, setInput] = useState('');
   const [options, setOptions] = useState<SqlFormatOptions>(DEFAULT_SQL_OPTIONS);
   const [output, setOutput] = useState('');
@@ -28,7 +30,7 @@ export default function SqlFormatTool() {
   const validateOnly = () => {
     const result = validateSqlLite(input);
     if (result.ok) {
-      setMessage({type: 'ok', text: '기본 유효성 검사 통과 (따옴표·괄호).'});
+      setMessage({type: 'ok', text: 'Basic validation passed (quotes and parentheses).'});
       return;
     }
     setMessage({type: 'error', text: result.error});
@@ -42,7 +44,7 @@ export default function SqlFormatTool() {
     }
     setInput(result.formatted);
     setOutput(result.formatted);
-    setMessage({type: 'ok', text: '정렬했습니다.'});
+    setMessage({type: 'ok', text: 'Formatted.'});
   };
 
   const minify = () => {
@@ -53,20 +55,20 @@ export default function SqlFormatTool() {
     }
     setInput(result.formatted);
     setOutput(result.formatted);
-    setMessage({type: 'ok', text: '한 줄로 압축했습니다.'});
+    setMessage({type: 'ok', text: 'Minified.'});
   };
 
   const copy = async () => {
     const text = output || input;
     if (!text.trim()) {
-      setMessage({type: 'error', text: '복사할 내용이 없습니다.'});
+      setMessage({type: 'error', text: 'No content to copy.'});
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setMessage({type: 'ok', text: '클립보드에 복사했습니다.'});
+      setMessage({type: 'ok', text: 'Copied to clipboard.'});
     } catch {
-      setMessage({type: 'error', text: '복사에 실패했습니다.'});
+      setMessage({type: 'error', text: 'Copy failed.'});
     }
   };
 
@@ -77,10 +79,10 @@ export default function SqlFormatTool() {
   };
 
   return (
-    <ToolPageShell title="SQL" description="SQL을 붙여 넣고 방언·키워드 대소문자·들여쓰기 패턴에 맞게 정렬합니다.">
+    <ToolPageShell title="SQL" description="Format SQL statements and tweak indentation and keyword case.">
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">방언</span>
+          <span className="field__label">{t('Dialect')}</span>
           <select className="field__select" value={options.dialect} onChange={e => patch('dialect', e.target.value as SqlDialect)}>
             <option value="sql">Standard SQL</option>
             <option value="mysql">MySQL</option>
@@ -92,15 +94,15 @@ export default function SqlFormatTool() {
           </select>
         </label>
         <label className="field">
-          <span className="field__label">키워드</span>
+          <span className="field__label">{t('Keywords')}</span>
           <select className="field__select" value={options.keywordCase} onChange={e => patch('keywordCase', e.target.value as SqlKeywordCase)}>
             <option value="upper">UPPER</option>
             <option value="lower">lower</option>
-            <option value="preserve">유지</option>
+            <option value="preserve">{t('Preserve')}</option>
           </select>
         </label>
         <label className="field">
-          <span className="field__label">들여쓰기</span>
+          <span className="field__label">{t('Indent')}</span>
           <select
             className="field__select"
             value={options.useTabs ? 'tab' : String(options.tabWidth)}
@@ -120,22 +122,24 @@ export default function SqlFormatTool() {
           </select>
         </label>
         <label className="field">
-          <span className="field__label">쿼리 간격</span>
+          <span className="field__label">{t('Query spacing')}</span>
           <select
             className="field__select"
             value={options.linesBetweenQueries}
             onChange={e => patch('linesBetweenQueries', Number(e.target.value) as 0 | 1 | 2)}
           >
-            <option value={0}>0줄</option>
-            <option value={1}>1줄</option>
-            <option value={2}>2줄</option>
+            <option value={0}>{t('0 lines')}</option>
+            <option value={1}>{t('1 line')}</option>
+            <option value={2}>{t('2 lines')}</option>
           </select>
         </label>
-        <p className="tool-status">{charCount.toLocaleString()}자</p>
+        <p className="tool-status">
+          {charCount.toLocaleString()} {t('Characters')}
+        </p>
       </div>
 
       <label className="field field--block">
-        <span className="field__label">입력</span>
+        <span className="field__label">{t('Input')}</span>
         <textarea
           className="field__textarea"
           value={input}
@@ -143,7 +147,7 @@ export default function SqlFormatTool() {
             setInput(e.target.value);
             setMessage(null);
           }}
-          placeholder={"SELECT id, name FROM users WHERE active = 1 ORDER BY name;"}
+          placeholder={'SELECT id, name FROM users WHERE active = 1 ORDER BY name;'}
           spellCheck={false}
           rows={16}
         />
@@ -151,21 +155,23 @@ export default function SqlFormatTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" onClick={format} disabled={!input.trim()}>
-          정렬
+          {t('Format')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={validateOnly} disabled={!input.trim()}>
-          유효 체크
+          {t('Validate')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={minify} disabled={!input.trim()}>
-          압축
+          {t('Minify')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={copy} disabled={!input.trim() && !output.trim()}>
-          복사
+          {t('Copy')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={clear} disabled={!input && !output}>
-          비우기
+          {t('Clear')}
         </button>
-        {message ? <p className={`tool-status${message.type === 'error' ? ' tool-status--error' : ' tool-status--ok'}`}>{message.text}</p> : null}
+        {message ? (
+          <p className={`tool-status${message.type === 'error' ? ' tool-status--error' : ' tool-status--ok'}`}>{t(message.text)}</p>
+        ) : null}
       </div>
     </ToolPageShell>
   );

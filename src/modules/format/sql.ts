@@ -24,7 +24,7 @@ export const DEFAULT_SQL_OPTIONS: SqlFormatOptions = {
 
 export function formatSql(input: string, options: SqlFormatOptions = DEFAULT_SQL_OPTIONS): SqlFormatResult {
   const raw = input.replace(/^\uFEFF/, '').trim();
-  if (!raw) return {ok: false, error: '내용을 입력하세요.'};
+  if (!raw) return {ok: false, error: 'Enter text.'};
 
   try {
     const formatted = formatSqlLib(raw, {
@@ -36,14 +36,14 @@ export function formatSql(input: string, options: SqlFormatOptions = DEFAULT_SQL
     });
     return {ok: true, formatted};
   } catch (e) {
-    return {ok: false, error: e instanceof Error ? e.message : 'SQL 정렬에 실패했습니다.'};
+    return {ok: false, error: e instanceof Error ? e.message : 'SQL formatting failed.'};
   }
 }
 
 /** Light check: not empty and balanced quotes / parentheses. */
 export function validateSqlLite(input: string): SqlFormatResult {
   const raw = input.replace(/^\uFEFF/, '').trim();
-  if (!raw) return {ok: false, error: '내용을 입력하세요.'};
+  if (!raw) return {ok: false, error: 'Enter text.'};
 
   let inSingle = false;
   let inDouble = false;
@@ -71,12 +71,12 @@ export function validateSqlLite(input: string): SqlFormatResult {
     if (ch === '(') paren++;
     if (ch === ')') {
       paren--;
-      if (paren < 0) return {ok: false, error: '괄호가 올바르지 않습니다. ) 가 더 많습니다.'};
+      if (paren < 0) return {ok: false, error: 'Unbalanced parentheses. Extra ).'};
     }
   }
 
-  if (inSingle || inDouble) return {ok: false, error: '따옴표가 닫히지 않았습니다.'};
-  if (paren !== 0) return {ok: false, error: `괄호가 올바르지 않습니다. ( 남은 개수: ${paren}`};
+  if (inSingle || inDouble) return {ok: false, error: 'Unclosed quotes.'};
+  if (paren !== 0) return {ok: false, error: `Unbalanced parentheses. Remaining open: ${paren}`};
 
   return {ok: true, formatted: raw};
 }

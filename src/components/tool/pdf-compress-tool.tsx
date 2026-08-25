@@ -2,10 +2,13 @@
 
 import {useState} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
+import {translateProgress} from '@/i18n/translate';
 import {compressPdf} from '@/modules/pdf';
-import {downloadBlob, formatBytes} from '@/modules/shared/file';
+import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
 export default function PdfCompressTool() {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState(0.7);
   const [busy, setBusy] = useState(false);
@@ -19,15 +22,14 @@ export default function PdfCompressTool() {
     if (!file) return;
     setBusy(true);
     setError('');
-    setStatus('준비 중…');
+    setStatus('Preparing…');
     try {
       const blob = await compressPdf(file, quality, 1.25, setStatus);
-      const name = file.name.replace(/\.pdf$/i, '') + '-compressed.pdf';
-      setResult({blob, name});
+      setResult({blob, name: replaceExtension(file.name, 'pdf')});
       setStatus('');
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : '처리에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Processing failed.');
       setStatus('');
     } finally {
       setBusy(false);
@@ -35,7 +37,10 @@ export default function PdfCompressTool() {
   };
 
   return (
-    <ToolPageShell title="PDF 압축" description="각 페이지를 이미지로 다시 담아 용량을 줄입니다. 텍스트 선택·벡터는 유지되지 않을 수 있습니다.">
+    <ToolPageShell
+      title="Compress PDF"
+      description="Re-pack each page as an image to shrink the file. Text selection and vectors may not be preserved."
+    >
       <FileDropzone
         accept="application/pdf,.pdf"
         files={files}
@@ -44,12 +49,14 @@ export default function PdfCompressTool() {
           setResult(null);
           setError('');
         }}
-        hint="PDF 1개"
+        hint="1 PDF"
       />
 
       <div className="tool-controls">
         <label className="field">
-          <span className="field__label">이미지 품질 {Math.round(quality * 100)}%</span>
+          <span className="field__label">
+            {t('Image quality')} {Math.round(quality * 100)}%
+          </span>
           <input
             className="field__range"
             type="range"
@@ -67,22 +74,25 @@ export default function PdfCompressTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" disabled={!file || busy} onClick={run}>
-          {busy ? '압축 중…' : '압축'}
+          {busy ? t('Compressing…') : t('Compress')}
         </button>
         {result ? (
           <button type="button" className="btn btn--ghost" onClick={() => downloadBlob(result.blob, result.name)}>
-            다운로드 ({formatBytes(result.blob.size)})
+            {t('Download')} ({formatBytes(result.blob.size)})
           </button>
         ) : null}
-        {status ? <p className="tool-status">{status}</p> : null}
-        {error ? <p className="tool-status tool-status--error">{error}</p> : null}
+        {status ? <p className="tool-status">{translateProgress(status, t)}</p> : null}
+        {error ? <p className="tool-status tool-status--error">{t(error)}</p> : null}
       </div>
 
       {file && result ? (
-        <div className="preview-meta">
-          <span>원본 {formatBytes(file.size)}</span>
-          <span>결과 {formatBytes(result.blob.size)}</span>
-          <span>{Math.max(1, Math.round((result.blob.size / file.size) * 100))}%</span>
+        <div className="preview-meta" style={{marginTop: 12}}>
+          <span>
+            {t('Original')} {formatBytes(file.size)}
+          </span>
+          <span>
+            {t('Result')} {formatBytes(result.blob.size)}
+          </span>
         </div>
       ) : null}
     </ToolPageShell>

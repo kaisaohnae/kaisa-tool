@@ -2,6 +2,7 @@
 
 import {useMemo, useState} from 'react';
 import {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useT} from '@/i18n/locale-context';
 import {compareTexts, type CompareOptions} from '@/modules/edit/compare';
 
 const DEFAULT_OPTIONS: CompareOptions = {
@@ -11,6 +12,7 @@ const DEFAULT_OPTIONS: CompareOptions = {
 };
 
 export default function CompareTool() {
+  const t = useT();
   const [left, setLeft] = useState('');
   const [right, setRight] = useState('');
   const [options, setOptions] = useState<CompareOptions>(DEFAULT_OPTIONS);
@@ -43,29 +45,29 @@ export default function CompareTool() {
   };
 
   return (
-    <ToolPageShell title="Compare" description="왼쪽·오른쪽 텍스트를 줄 단위로 비교합니다.">
+    <ToolPageShell title="Compare" description="Diff two texts line by line.">
       <div className="tool-controls">
         <label className="field" style={{flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 'auto'}}>
           <input type="checkbox" checked={options.trim} onChange={e => patch('trim', e.target.checked)} />
-          <span className="field__label">앞뒤 공백 무시</span>
+          <span className="field__label">{t('Ignore leading/trailing spaces')}</span>
         </label>
         <label className="field" style={{flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 'auto'}}>
           <input type="checkbox" checked={options.ignoreEmpty} onChange={e => patch('ignoreEmpty', e.target.checked)} />
-          <span className="field__label">빈 줄 무시</span>
+          <span className="field__label">{t('Ignore blank lines')}</span>
         </label>
         <label className="field" style={{flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 'auto'}}>
           <input type="checkbox" checked={options.ignoreCase} onChange={e => patch('ignoreCase', e.target.checked)} />
-          <span className="field__label">대소문자 무시</span>
+          <span className="field__label">{t('Ignore case')}</span>
         </label>
         <label className="field" style={{flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 'auto'}}>
           <input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} />
-          <span className="field__label">차이만 보기</span>
+          <span className="field__label">{t('Show differences only')}</span>
         </label>
       </div>
 
       <div className="compare-grid">
         <label className="field field--block">
-          <span className="field__label">왼쪽 (원본)</span>
+          <span className="field__label">{t('Left (original)')}</span>
           <textarea
             className="field__textarea field__textarea--sm"
             value={left}
@@ -73,13 +75,13 @@ export default function CompareTool() {
               setLeft(e.target.value);
               setRan(false);
             }}
-            placeholder="원본 텍스트"
+            placeholder={t('Original text')}
             spellCheck={false}
             rows={12}
           />
         </label>
         <label className="field field--block">
-          <span className="field__label">오른쪽 (비교)</span>
+          <span className="field__label">{t('Right (compare)')}</span>
           <textarea
             className="field__textarea field__textarea--sm"
             value={right}
@@ -87,7 +89,7 @@ export default function CompareTool() {
               setRight(e.target.value);
               setRan(false);
             }}
-            placeholder="비교할 텍스트"
+            placeholder={t('Text to compare')}
             spellCheck={false}
             rows={12}
           />
@@ -96,17 +98,17 @@ export default function CompareTool() {
 
       <div className="tool-actions">
         <button type="button" className="btn btn--primary" onClick={() => setRan(true)} disabled={!left && !right}>
-          비교
+          {t('Compare')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={swap} disabled={!left && !right}>
-          좌우 바꾸기
+          {t('Swap left/right')}
         </button>
         <button type="button" className="btn btn--ghost" onClick={clear} disabled={!left && !right && !ran}>
-          비우기
+          {t('Clear')}
         </button>
         {result ? (
           <p className="tool-status">
-            동일 {result.same} · 추가 {result.added} · 삭제 {result.removed}
+            {t('Same')} {result.same} · {t('Added')} {result.added} · {t('Removed')} {result.removed}
           </p>
         ) : null}
       </div>
@@ -117,16 +119,16 @@ export default function CompareTool() {
             <thead>
               <tr>
                 <th className="diff-table__no">#</th>
-                <th>왼쪽</th>
+                <th>{t('Left')}</th>
                 <th className="diff-table__no">#</th>
-                <th>오른쪽</th>
+                <th>{t('Right')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="diff-table__empty">
-                    표시할 차이가 없습니다.
+                    {t('No differences to show.')}
                   </td>
                 </tr>
               ) : (

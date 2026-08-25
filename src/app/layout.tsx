@@ -10,6 +10,7 @@ import Footer from '@/components/layout/footer';
 import GoogleAnalytics from '@/components/layout/google-analytics';
 import GoogleAdsense from '@/components/layout/google-adsense';
 import ThemeProvider from '@/components/layout/theme-provider';
+import {LocaleProvider} from '@/i18n/locale-context';
 import {THEME_STORAGE_KEY} from '@/store/use-theme-store';
 
 const syne = Syne({
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     default: 'Kaisa Tool',
     template: '%s · Kaisa Tool'
   },
-  description: '이미지·PDF를 서버 없이 브라우저에서 처리하는 유틸리티'
+  description: 'Browser-based image and PDF utilities — process files locally without a server.'
 };
 
 export default function RootLayout({
@@ -38,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <head>
         <GoogleAdsense />
       </head>
@@ -50,9 +51,11 @@ export default function RootLayout({
         />
         <GoogleAnalytics />
         <ThemeProvider />
-        <Header />
-        <main className="site-main">{children}</main>
-        <Footer />
+        <LocaleProvider>
+          <Header />
+          <main className="site-main">{children}</main>
+          <Footer />
+        </LocaleProvider>
       </body>
     </html>
   );

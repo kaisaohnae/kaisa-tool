@@ -2,6 +2,7 @@
 
 import {useCallback, useRef, useState, type DragEvent, type ReactNode} from 'react';
 import {filterAcceptedFiles, formatBytes} from '@/modules/shared/file';
+import {useT} from '@/i18n/locale-context';
 
 interface FileDropzoneProps {
   accept: string;
@@ -19,22 +20,24 @@ export default function FileDropzone({
   sortable = false,
   files,
   onChange,
-  title = '파일을 끌어다 놓거나 클릭',
+  title,
   hint
 }: FileDropzoneProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(false);
   const [rejectHint, setRejectHint] = useState('');
+  const dropTitle = t(title ?? 'Drop files here or click');
 
   const addFiles = useCallback(
     (list: FileList | File[]) => {
       const accepted = filterAcceptedFiles(list, accept);
       const rejected = Array.from(list).length - accepted.length;
-      setRejectHint(rejected > 0 ? `지원하지 않는 파일 ${rejected}개를 제외했습니다.` : '');
+      setRejectHint(rejected > 0 ? t('Unsupported files were skipped.') : '');
       if (!accepted.length) return;
       onChange(multiple ? [...files, ...accepted] : [accepted[0]]);
     },
-    [accept, files, multiple, onChange]
+    [accept, files, multiple, onChange, t]
   );
 
   const move = (index: number, dir: -1 | 1) => {
@@ -64,8 +67,8 @@ export default function FileDropzone({
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
       >
-        <p className="dropzone__title">{title}</p>
-        {hint ? <p className="dropzone__hint">{hint}</p> : null}
+        <p className="dropzone__title">{dropTitle}</p>
+        {hint ? <p className="dropzone__hint">{t(hint)}</p> : null}
         <input
           ref={inputRef}
           className="dropzone__input"
@@ -108,7 +111,7 @@ export default function FileDropzone({
                   onChange(files.filter((_, i) => i !== index));
                 }}
               >
-                제거
+                {t('Remove')}
               </button>
             </div>
           ))}
@@ -119,10 +122,11 @@ export default function FileDropzone({
 }
 
 export function ToolPageShell({title, description, children}: {title: string; description: string; children: ReactNode}) {
+  const t = useT();
   return (
     <article className="tool-page">
-      <h1 className="tool-page__title">{title}</h1>
-      <p className="tool-page__desc">{description}</p>
+      <h1 className="tool-page__title">{t(title)}</h1>
+      <p className="tool-page__desc">{t(description)}</p>
       <div className="tool-panel">{children}</div>
     </article>
   );
