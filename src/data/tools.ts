@@ -11,7 +11,7 @@ export interface ToolItem {
 export const TOOL_CATEGORIES: {id: ToolCategory; label: string; description: string}[] = [
   {id: 'image', label: '이미지', description: '용량 줄이기, 리사이즈, 포맷 변환'},
   {id: 'pdf', label: 'PDF', description: '압축, 합치기, 분할, 이미지 변환'},
-  {id: 'format', label: 'FORMAT', description: 'JSON·SQL 정렬·유효성 검사'},
+  {id: 'format', label: 'FORMAT', description: 'JSON·SQL 정렬, QR 코드'},
   {id: 'edit', label: 'EDIT', description: '텍스트 비교·중복 제거'}
 ];
 
@@ -99,6 +99,13 @@ export const TOOLS: ToolItem[] = [
     title: 'SQL',
     description: 'SQL 문을 정렬하고 패턴을 설정합니다.',
     href: '/format/sql/'
+  },
+  {
+    id: 'format-qr',
+    category: 'format',
+    title: 'QR 코드',
+    description: 'URL·텍스트로 QR 코드를 만듭니다.',
+    href: '/format/qr/'
   },
   {
     id: 'edit-compare',

@@ -623,6 +623,44 @@ body {
   min-height: 220px;
 }
 
+.field__textarea--compact {
+  min-height: 120px;
+}
+
+.field__color {
+  width: 48px;
+  height: 38px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-card);
+  cursor: pointer;
+}
+
+.qr-preview {
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  padding: 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-elevated);
+}
+
+.qr-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.qr-preview__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .field--block {
   width: 100%;
 }
