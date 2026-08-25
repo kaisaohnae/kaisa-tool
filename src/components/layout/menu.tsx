@@ -4,8 +4,8 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 
 const MENU_ITEMS = [
-  {href: '/image/', label: '이미지', match: '/image'},
-  {href: '/pdf/', label: 'PDF', match: '/pdf'}
+  {href: '/image/compress/', label: '이미지', match: '/image'},
+  {href: '/pdf/compress/', label: 'PDF', match: '/pdf'}
 ];
 
 export default function Menu() {

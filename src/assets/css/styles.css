@@ -252,12 +252,10 @@ body {
 
 /* Subnav */
 .subnav {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 900;
-  min-height: var(--subnav-height);
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: 0;
 }
 
 .subnav__list {
@@ -266,7 +264,7 @@ body {
   gap: 4px 4px;
   list-style: none;
   margin: 0;
-  padding: 10px 0;
+  padding: 28px 0 8px;
 }
 
 .subnav__link {
@@ -301,21 +299,50 @@ body {
 }
 
 .site-main__body {
-  padding-top: 40px;
+  padding-top: 24px;
 }
 
 .site-footer {
+  flex-shrink: 0;
   border-top: 1px solid var(--color-border);
-  padding-block: 24px;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
+  padding: 40px 0;
 }
 
 .site-footer__inner {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
+  align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.site-footer__copy {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.site-footer__copy-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.3s;
+}
+
+.site-footer__copy-link:hover {
+  color: var(--color-accent);
+}
+
+.site-footer__link {
+  font-size: 13px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.site-footer__link:hover {
+  color: var(--color-accent);
 }
 
 /* Home — simple */
@@ -374,7 +401,8 @@ body {
 
 /* Tool page */
 .tool-page {
-  max-width: 720px;
+  max-width: 1100px;
+  width: 100%;
 }
 
 .tool-page__title {
