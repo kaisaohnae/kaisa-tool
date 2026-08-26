@@ -1,8 +1,8 @@
-import CategoryHub from '@/components/layout/category-hub';
-import {categoryPageMetadata} from '@/lib/seo';
+import Redirect from '@/components/redirect';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata = categoryPageMetadata('pdf');
+export const metadata = toolPageMetadata('/pdf/compress/');
 
 export default function PdfIndexPage() {
-  return <CategoryHub category="pdf" />;
+  return <Redirect href="/pdf/compress/" />;
 }

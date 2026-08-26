@@ -1,14 +1,9 @@
-import HomeHub from '@/components/layout/home-hub';
-import {homePageMetadata} from '@/lib/seo';
+import Redirect from '@/components/redirect';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata = homePageMetadata();
+/** Site entry → first Image tool (no separate home hub). */
+export const metadata = toolPageMetadata('/image/compress/');
 
 export default function Page() {
-  return (
-    <div className="site-shell">
-      <div className="site-shell__inner site-main__body">
-        <HomeHub />
-      </div>
-    </div>
-  );
+  return <Redirect href="/image/compress/" />;
 }

@@ -1,8 +1,8 @@
-import CategoryHub from '@/components/layout/category-hub';
-import {categoryPageMetadata} from '@/lib/seo';
+import Redirect from '@/components/redirect';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata = categoryPageMetadata('edit');
+export const metadata = toolPageMetadata('/edit/compare/');
 
 export default function EditIndexPage() {
-  return <CategoryHub category="edit" />;
+  return <Redirect href="/edit/compare/" />;
 }

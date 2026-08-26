@@ -8,11 +8,11 @@ import ThemeToggle from '@/components/layout/theme-toggle';
 import {useT} from '@/i18n/locale-context';
 
 const MENU_ITEMS = [
-  {href: '/image/', label: 'Image', match: '/image'},
-  {href: '/pdf/', label: 'PDF', match: '/pdf'},
-  {href: '/format/', label: 'FORMAT', match: '/format'},
-  {href: '/edit/', label: 'EDIT', match: '/edit'},
-  {href: '/util/', label: 'UTIL', match: '/util'}
+  {href: '/image/compress/', label: 'Image', match: '/image'},
+  {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
+  {href: '/format/json/', label: 'FORMAT', match: '/format'},
+  {href: '/edit/compare/', label: 'EDIT', match: '/edit'},
+  {href: '/util/password/', label: 'UTIL', match: '/util'}
 ];
 
 export default function Header() {
@@ -73,7 +73,7 @@ export default function Header() {
       <div className="site-shell site-shell--header">
         <div className="header__top site-shell__inner">
           <p className="header__logo">
-            <Link href="/" aria-label="Kaisa Tool Home">
+            <Link href="/image/compress/" aria-label="Kaisa Tool Home">
               <IconLogo width={100} height={42} />
             </Link>
           </p>
