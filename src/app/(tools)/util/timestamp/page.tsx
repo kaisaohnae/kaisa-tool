@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import TimestampTool from '@/components/tool/timestamp-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '타임스탬프'};
+export const metadata = toolPageMetadata('/util/timestamp/');
 
 export default function Page() {
   return <TimestampTool />;

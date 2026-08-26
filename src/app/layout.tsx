@@ -1,6 +1,3 @@
-/**
- * @file 루트 레이아웃
- */
 import type {Metadata} from 'next';
 import {Syne, DM_Sans} from 'next/font/google';
 import '@/assets/css/reset.css';
@@ -12,6 +9,7 @@ import GoogleAdsense from '@/components/layout/google-adsense';
 import ThemeProvider from '@/components/layout/theme-provider';
 import {LocaleProvider} from '@/i18n/locale-context';
 import {THEME_STORAGE_KEY} from '@/store/use-theme-store';
+import {getSiteUrl, SITE_DESCRIPTION, SITE_NAME} from '@/config/site';
 
 const syne = Syne({
   subsets: ['latin'],
@@ -26,11 +24,29 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
-    default: 'Kaisa Tool',
-    template: '%s · Kaisa Tool'
+    default: SITE_NAME,
+    template: `%s · ${SITE_NAME}`
   },
-  description: 'Browser-based image and PDF utilities — process files locally without a server.'
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    locale: 'en_US'
+  },
+  twitter: {
+    card: 'summary',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION
+  },
+  robots: {
+    index: true,
+    follow: true
+  }
 };
 
 export default function RootLayout({

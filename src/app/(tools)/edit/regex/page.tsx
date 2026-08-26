@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import RegexTool from '@/components/tool/regex-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '정규식'};
+export const metadata = toolPageMetadata('/edit/regex/');
 
 export default function Page() {
   return <RegexTool />;

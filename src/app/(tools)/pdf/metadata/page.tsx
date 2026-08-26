@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PdfMetadataTool from '@/components/tool/pdf-metadata-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '메타데이터'};
+export const metadata = toolPageMetadata('/pdf/metadata/');
 
 export default function Page() {
   return <PdfMetadataTool />;

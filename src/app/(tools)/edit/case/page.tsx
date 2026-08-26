@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import CaseConvertTool from '@/components/tool/case-convert-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '대소문자'};
+export const metadata = toolPageMetadata('/edit/case/');
 
 export default function Page() {
   return <CaseConvertTool />;

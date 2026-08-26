@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PdfCompressTool from '@/components/tool/pdf-compress-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: 'PDF 압축'};
+export const metadata = toolPageMetadata('/pdf/compress/');
 
 export default function Page() {
   return <PdfCompressTool />;

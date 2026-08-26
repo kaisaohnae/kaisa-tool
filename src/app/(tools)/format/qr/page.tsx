@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import QrCodeTool from '@/components/tool/qr-code-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: 'QR 코드'};
+export const metadata = toolPageMetadata('/format/qr/');
 
 export default function Page() {
   return <QrCodeTool />;

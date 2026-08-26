@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ImageWatermarkTool from '@/components/tool/image-watermark-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '워터마크'};
+export const metadata = toolPageMetadata('/image/watermark/');
 
 export default function Page() {
   return <ImageWatermarkTool />;

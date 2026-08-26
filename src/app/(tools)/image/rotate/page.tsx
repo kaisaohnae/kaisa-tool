@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ImageRotateTool from '@/components/tool/image-rotate-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '회전·뒤집기'};
+export const metadata = toolPageMetadata('/image/rotate/');
 
 export default function Page() {
   return <ImageRotateTool />;

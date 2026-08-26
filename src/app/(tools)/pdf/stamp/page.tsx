@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PdfStampTool from '@/components/tool/pdf-stamp-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '이미지 삽입'};
+export const metadata = toolPageMetadata('/pdf/stamp/');
 
 export default function Page() {
   return <PdfStampTool />;

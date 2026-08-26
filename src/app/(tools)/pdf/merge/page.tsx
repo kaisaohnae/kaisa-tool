@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PdfMergeTool from '@/components/tool/pdf-merge-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: 'PDF 합치기'};
+export const metadata = toolPageMetadata('/pdf/merge/');
 
 export default function Page() {
   return <PdfMergeTool />;

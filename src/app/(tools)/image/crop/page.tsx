@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ImageCropTool from '@/components/tool/image-crop-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '자르기'};
+export const metadata = toolPageMetadata('/image/crop/');
 
 export default function Page() {
   return <ImageCropTool />;

@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import LoremTool from '@/components/tool/lorem-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '더미 텍스트'};
+export const metadata = toolPageMetadata('/util/lorem/');
 
 export default function Page() {
   return <LoremTool />;

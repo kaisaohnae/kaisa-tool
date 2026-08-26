@@ -308,6 +308,13 @@ export const TOOLS: ToolItem[] = [
     title: 'Unit Converter',
     description: 'Convert length, size, temperature, and px/rem.',
     href: '/util/unit/'
+  },
+  {
+    id: 'util-lorem',
+    category: 'util',
+    title: 'Lorem Ipsum',
+    description: 'Generate placeholder text for layouts and mockups.',
+    href: '/util/lorem/'
   }
 ];
 

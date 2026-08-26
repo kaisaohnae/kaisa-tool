@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PasswordTool from '@/components/tool/password-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '비밀번호'};
+export const metadata = toolPageMetadata('/util/password/');
 
 export default function Page() {
   return <PasswordTool />;

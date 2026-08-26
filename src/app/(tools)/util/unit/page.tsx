@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import UnitTool from '@/components/tool/unit-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '단위 변환'};
+export const metadata = toolPageMetadata('/util/unit/');
 
 export default function Page() {
   return <UnitTool />;

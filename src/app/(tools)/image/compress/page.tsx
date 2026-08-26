@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ImageCompressTool from '@/components/tool/image-compress-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '이미지 용량 줄이기'};
+export const metadata = toolPageMetadata('/image/compress/');
 
 export default function Page() {
   return <ImageCompressTool />;

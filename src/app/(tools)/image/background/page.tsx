@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ImageBackgroundTool from '@/components/tool/image-background-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '배경'};
+export const metadata = toolPageMetadata('/image/background/');
 
 export default function Page() {
   return <ImageBackgroundTool />;

@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import PdfSplitTool from '@/components/tool/pdf-split-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: 'PDF 분할'};
+export const metadata = toolPageMetadata('/pdf/split/');
 
 export default function Page() {
   return <PdfSplitTool />;

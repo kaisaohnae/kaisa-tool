@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import ReplaceTool from '@/components/tool/replace-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '찾기·바꾸기'};
+export const metadata = toolPageMetadata('/edit/replace/');
 
 export default function Page() {
   return <ReplaceTool />;

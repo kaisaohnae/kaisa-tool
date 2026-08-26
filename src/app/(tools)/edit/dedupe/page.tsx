@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import DedupeTool from '@/components/tool/dedupe-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '중복제거'};
+export const metadata = toolPageMetadata('/edit/dedupe/');
 
 export default function Page() {
   return <DedupeTool />;

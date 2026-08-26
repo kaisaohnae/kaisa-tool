@@ -6,6 +6,7 @@ import {filterAcceptedFiles, formatBytes} from '@/modules/shared/file';
 import {pathToToolKey} from '@/modules/shared/tool-key';
 import {useT} from '@/i18n/locale-context';
 import ToolRequestSection from '@/components/tool/tool-request-section';
+import {toolJsonLd} from '@/lib/seo';
 
 interface FileDropzoneProps {
   accept: string;
@@ -128,9 +129,14 @@ export function ToolPageShell({title, description, children}: {title: string; de
   const t = useT();
   const pathname = usePathname();
   const toolKey = pathToToolKey(pathname);
+  const normalized = pathname.endsWith('/') ? pathname : `${pathname}/`;
+  const jsonLd = toolJsonLd(normalized);
 
   return (
     <article className="tool-page">
+      {jsonLd ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd)}} />
+      ) : null}
       <h1 className="tool-page__title">{t(title)}</h1>
       <p className="tool-page__desc">{t(description)}</p>
       <div className="tool-panel">{children}</div>

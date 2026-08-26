@@ -1,5 +1,8 @@
-import Redirect from '@/components/redirect';
+import CategoryHub from '@/components/layout/category-hub';
+import {categoryPageMetadata} from '@/lib/seo';
+
+export const metadata = categoryPageMetadata('format');
 
 export default function FormatIndexPage() {
-  return <Redirect href="/format/json/" />;
+  return <CategoryHub category="format" />;
 }

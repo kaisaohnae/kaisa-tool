@@ -1,7 +1,7 @@
-import type {Metadata} from 'next';
 import CountTool from '@/components/tool/count-tool';
+import {toolPageMetadata} from '@/lib/seo';
 
-export const metadata: Metadata = {title: '글자 수'};
+export const metadata = toolPageMetadata('/edit/count/');
 
 export default function Page() {
   return <CountTool />;

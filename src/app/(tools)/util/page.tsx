@@ -1,5 +1,8 @@
-import Redirect from '@/components/redirect';
+import CategoryHub from '@/components/layout/category-hub';
+import {categoryPageMetadata} from '@/lib/seo';
+
+export const metadata = categoryPageMetadata('util');
 
 export default function UtilIndexPage() {
-  return <Redirect href="/util/password/" />;
+  return <CategoryHub category="util" />;
 }

@@ -3159,6 +3159,16 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "回复提交失败。",
     hi: "जवाब भेजने में विफल।"
   },
+  "Lorem Ipsum": {
+    ko: "더미 텍스트",
+    zh: "占位文本",
+    hi: "लोरेम इप्सम"
+  },
+  "Generate placeholder text for layouts and mockups.": {
+    ko: "레이아웃·목업용 더미 텍스트를 생성합니다.",
+    zh: "生成用于布局和原型的占位文本。",
+    hi: "लेआउट और मॉकअप के लिए प्लेसहोल्डर टेक्स्ट बनाएं।"
+  },
 };
 
-export const DICTIONARY_KEY_COUNT = 630 as const;
+export const DICTIONARY_KEY_COUNT = 632 as const;

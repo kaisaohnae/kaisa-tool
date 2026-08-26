@@ -36,7 +36,7 @@ export default function LoremTool() {
   };
 
   return (
-    <ToolPageShell title="더미 텍스트" description="레이아웃용 라틴·한글 더미 문단·문장·단어를 만듭니다.">
+    <ToolPageShell title="Lorem Ipsum" description="Generate placeholder text for layouts and mockups.">
       <div className="tool-controls">
         <label className="field">
           <span className="field__label">단위</span>
