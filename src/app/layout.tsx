@@ -46,6 +46,9 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true
+  },
+  other: {
+    'naver-site-verification': 'c5caf1c3dc5d038d422da0fa7fded9de6363cd98'
   }
 };
 
