@@ -1,23 +1,49 @@
 'use client';
 
+import Link from 'next/link';
+import {useEffect} from 'react';
+import MemberHeaderActions from '@/components/layout/member-header-actions';
 import {LOCALE_OPTIONS} from '@/i18n/detect';
-import {useLocale, useSetLocale} from '@/i18n/locale-context';
+import {useLocale, useSetLocale, useT} from '@/i18n/locale-context';
+import useMemberStore from '@/store/use-member-store';
 
 export default function Footer() {
   const locale = useLocale();
   const setLocale = useSetLocale();
+  const t = useT();
+  const {member, hydrated, hydrate, logout} = useMemberStore();
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   return (
     <footer id="footer" className="site-footer">
       <div className="site-shell">
         <div className="site-footer__inner site-shell__inner">
-          <p className="site-footer__copy">
-            © 2005 Kaisa ·{' '}
-            <a href="https://kaisa.co.kr" className="site-footer__copy-link" target="_blank" rel="noopener noreferrer">
-              kaisa.co.kr
-            </a>
-            . All Rights Reserved.
-          </p>
+          <div className="site-footer__brand">
+            <div className="site-footer__auth">
+              {hydrated && member ? (
+                <MemberHeaderActions member={member} onLogout={() => logout()} />
+              ) : (
+                <div className="auth-chip">
+                  <Link href="/login/" className="auth-chip__link">
+                    {t('Login')}
+                  </Link>
+                  <Link href="/register/" className="auth-chip__link">
+                    {t('Register')}
+                  </Link>
+                </div>
+              )}
+            </div>
+            <p className="site-footer__copy">
+              © 2005 Kaisa ·{' '}
+              <a href="https://kaisa.co.kr" className="site-footer__copy-link" target="_blank" rel="noopener noreferrer">
+                kaisa.co.kr
+              </a>
+              . All Rights Reserved.
+            </p>
+          </div>
           <div className="site-footer__aside">
             <div className="site-footer__langs" role="group" aria-label="Language">
               {LOCALE_OPTIONS.map(option => {

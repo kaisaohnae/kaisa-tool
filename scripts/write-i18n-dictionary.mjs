@@ -1064,6 +1064,78 @@ add('Base (1rem)', '기준 (1rem)', '基准 (1rem)', 'आधार (1rem)');
 add('Swap units', '단위 바꾸기', '交换单位', 'इकाई बदलें');
 add('No result to copy.', '복사할 결과가 없습니다.', '没有可复制的结果。', 'कॉपी करने के लिए परिणाम नहीं।');
 
+// ——— Member auth ———
+add('Login', '로그인', '登录', 'लॉगिन');
+add('Register', '회원가입', '注册', 'पंजीकरण');
+add('Email', '이메일', '邮箱', 'ईमेल');
+add('Confirm password', '비밀번호 확인', '确认密码', 'पासवर्ड पुष्टि');
+add('Save email', '아이디 저장', '保存账号', 'ईमेल सहेजें');
+add('Member', 'Member', 'Member', 'Member');
+add('Login failed.', '로그인에 실패했습니다.', '登录失败。', 'लॉगिन विफल।');
+add('No account? ', '계정이 없으면 ', '没有账号？', 'खाता नहीं है? ');
+add('Find ID', '아이디 찾기', '找回账号', 'आईडी खोजें');
+add('Forgot password', '비밀번호 찾기', '找回密码', 'पासवर्ड भूल गए');
+add('Send verification code', '인증번호 받기', '获取验证码', 'सत्यापन कोड भेजें');
+add('6-digit code', '인증번호 6자리', '6位验证码', '6 अंकों का कोड');
+add('Resend', '다시 받기', '重新发送', 'फिर भेजें');
+add('Sign up', '가입하기', '注册', 'साइन अप');
+add('Already have an account? ', '이미 계정이 있으면 ', '已有账号？', 'पहले से खाता है? ');
+add(
+  'We sent a verification code to your email. Enter it within 5 minutes. Check spam if you do not see it.',
+  '인증번호를 메일로 보냈습니다. 5분 안에 입력해 주세요. 메일이 없으면 스팸함을 확인해 주세요.',
+  '验证码已发送到邮箱，请在5分钟内输入。如未收到请检查垃圾邮件。',
+  'हमने ईमेल पर सत्यापन कोड भेजा है। 5 मिनट में दर्ज करें। न दिखे तो स्पैम जांचें।'
+);
+add('Failed to send verification code.', '인증번호 발송에 실패했습니다.', '验证码发送失败。', 'सत्यापन कोड भेजने में विफल।');
+add('Please request a verification code first.', '인증번호 받기를 먼저 진행해 주세요.', '请先获取验证码。', 'पहले सत्यापन कोड का अनुरोध करें।');
+add('Passwords do not match.', '비밀번호가 일치하지 않습니다.', '密码不一致。', 'पासवर्ड मेल नहीं खाते।');
+add('Registration failed.', '회원가입에 실패했습니다.', '注册失败。', 'पंजीकरण विफल।');
+add(
+  'If you request a new code, the previous one will no longer work. ',
+  '인증번호를 다시 받으면 이전 번호는 사용할 수 없습니다. ',
+  '重新获取后，旧验证码将失效。',
+  'नया कोड मांगने पर पुराना कोड काम नहीं करेगा। '
+);
+add('Account settings', '회원 설정', '账号设置', 'खाता सेटिंग');
+add('Logout', '로그아웃', '退出登录', 'लॉग आउट');
+add('Change password', '비밀번호 변경', '修改密码', 'पासवर्ड बदलें');
+add('Current password', '현재 비밀번호', '当前密码', 'वर्तमान पासवर्ड');
+add('New password', '새 비밀번호', '新密码', 'नया पासवर्ड');
+add('Confirm new password', '새 비밀번호 확인', '确认新密码', 'नया पासवर्ड पुष्टि');
+add('Close', '닫기', '关闭', 'बंद करें');
+add('Change', '변경', '更改', 'बदलें');
+add('New passwords do not match.', '새 비밀번호가 일치하지 않습니다.', '新密码不一致。', 'नए पासवर्ड मेल नहीं खाते।');
+add('Password changed.', '비밀번호가 변경되었습니다.', '密码已更改。', 'पासवर्ड बदल दिया गया।');
+add('Change failed.', '변경에 실패했습니다.', '更改失败。', 'परिवर्तन विफल।');
+add(
+  'Recover your login ID by verifying the email you used to sign up.',
+  '가입 시 사용한 이메일로 인증 후, 로그인 아이디를 메일로 안내합니다.',
+  '验证注册邮箱后，将把登录账号发送到该邮箱。',
+  'साइन अप ईमेल सत्यापित करके लॉगिन आईडी पाएँ।'
+);
+add('Email me my ID', '아이디 메일로 받기', '把账号发到邮箱', 'आईडी ईमेल करें');
+add('Go to login', '로그인으로 이동', '前往登录', 'लॉगिन पर जाएँ');
+add(
+  'We sent your login ID to your email. Check your inbox.',
+  '가입 아이디를 이메일로 보냈습니다. 메일함을 확인해 주세요.',
+  '登录账号已发送到邮箱，请查收。',
+  'लॉगिन आईडी ईमेल पर भेज दी गई है। इनबॉक्स जांचें।'
+);
+add('Could not find your ID.', '아이디 찾기에 실패했습니다.', '未能找回账号。', 'आईडी नहीं मिल सकी।');
+add(
+  'Verify your signup email, then set a new password.',
+  '가입 이메일 인증 후 새 비밀번호로 변경할 수 있습니다.',
+  '验证注册邮箱后即可设置新密码。',
+  'साइन अप ईमेल सत्यापित करके नया पासवर्ड सेट करें।'
+);
+add(
+  'Password updated. Sign in with your new password.',
+  '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.',
+  '密码已更改，请用新密码登录。',
+  'पासवर्ड अपडेट हो गया। नए पासवर्ड से साइन इन करें।'
+);
+add('Could not reset password.', '비밀번호 변경에 실패했습니다.', '无法重置密码।', 'पासवर्ड रीसेट नहीं हो सका।');
+
 const keys = Object.keys(d);
 const lines = [
   '/**',

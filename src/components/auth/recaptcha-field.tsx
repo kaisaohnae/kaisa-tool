@@ -7,6 +7,7 @@ const ReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {ssr: false});
 
 type RecaptchaFieldProps = {
   onChange: (token: string | null) => void;
+  /** 체크 성공 후 숨김. 언마운트하지 않아 Timeout 방지 */
   hidden?: boolean;
 };
 

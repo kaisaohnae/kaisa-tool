@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import {Syne, DM_Sans} from 'next/font/google';
 import '@/assets/css/reset.css';
 import '@/assets/css/styles.css';
+import '@/ui-kit/kit.css';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import GoogleAnalytics from '@/components/layout/google-analytics';
