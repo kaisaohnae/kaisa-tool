@@ -3090,9 +3090,14 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     hi: "कॉपी करने के लिए परिणाम नहीं।"
   },
   "Requests": {
-    ko: "요청사항",
-    zh: "需求反馈",
-    hi: "अनुरोध"
+    ko: "댓글",
+    zh: "评论",
+    hi: "टिप्पणियाँ"
+  },
+  "Comments": {
+    ko: "댓글",
+    zh: "评论",
+    hi: "टिप्पणियाँ"
   },
   "Nickname": {
     ko: "닉네임",
@@ -3103,6 +3108,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "내용",
     zh: "内容",
     hi: "संदेश"
+  },
+  "Comment": {
+    ko: "댓글",
+    zh: "评论",
+    hi: "टिप्पणी"
   },
   "Submit": {
     ko: "등록",
@@ -3138,6 +3148,61 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "닉네임과 내용을 입력해 주세요.",
     zh: "请填写昵称和内容。",
     hi: "उपनाम और संदेश आवश्यक हैं।"
+  },
+  "Leave a comment": {
+    ko: "댓글을 남겨 주세요",
+    zh: "留下评论",
+    hi: "टिप्पणी लिखें"
+  },
+  "Writing as {name}": {
+    ko: "{name}님으로 작성 중",
+    zh: "正在以 {name} 的身份撰写",
+    hi: "{name} के रूप में लिख रहे हैं"
+  },
+  "Write a reply": {
+    ko: "답글을 입력해 주세요",
+    zh: "填写回复",
+    hi: "जवाब लिखें"
+  },
+  "Post reply": {
+    ko: "답글 등록",
+    zh: "提交回复",
+    hi: "जवाब भेजें"
+  },
+  "No comments yet. Be the first.": {
+    ko: "아직 댓글이 없습니다. 첫 댓글을 남겨보세요.",
+    zh: "暂无评论。来写第一条吧。",
+    hi: "अभी कोई टिप्पणी नहीं। पहली लिखें।"
+  },
+  "No comments yet.": {
+    ko: "아직 댓글이 없습니다.",
+    zh: "暂无评论。",
+    hi: "अभी कोई टिप्पणी नहीं।"
+  },
+  "Comment submitted.": {
+    ko: "댓글이 등록되었습니다.",
+    zh: "已提交评论。",
+    hi: "टिप्पणी भेज दी गई।"
+  },
+  "Failed to load comments.": {
+    ko: "댓글을 불러오지 못했습니다.",
+    zh: "无法加载评论。",
+    hi: "टिप्पणियाँ लोड नहीं हो सकीं।"
+  },
+  "Failed to submit comment.": {
+    ko: "댓글 등록에 실패했습니다.",
+    zh: "提交失败。",
+    hi: "टिप्पणी भेजने में विफल।"
+  },
+  "Comment is required.": {
+    ko: "내용을 입력해 주세요.",
+    zh: "请填写内容。",
+    hi: "संदेश आवश्यक है।"
+  },
+  "Log in to leave a comment.": {
+    ko: "댓글은 로그인 후 작성할 수 있습니다.",
+    zh: "登录后才能发表评论。",
+    hi: "टिप्पणी के लिए लॉगिन करें।"
   },
   "Complete the robot check.": {
     ko: "로봇 방지 확인을 완료해 주세요.",
@@ -3329,6 +3394,26 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "更改失败。",
     hi: "परिवर्तन विफल।"
   },
+  "Delete account": {
+    ko: "회원 탈퇴",
+    zh: "注销账号",
+    hi: "खाता हटाएँ"
+  },
+  "Enter your password to permanently delete this account.": {
+    ko: "비밀번호를 입력하면 회원 정보가 즉시 삭제됩니다.",
+    zh: "输入密码后将立即删除账号信息。",
+    hi: "पासवर्ड डालते ही खाता जानकारी हमेशा के लिए हट जाएगी।"
+  },
+  "Delete this account? This cannot be undone.": {
+    ko: "탈퇴하면 회원 정보가 즉시 삭제되며 되돌릴 수 없습니다. 계속할까요?",
+    zh: "注销后账号信息将立即删除且无法恢复。要继续吗？",
+    hi: "खाता हटाने पर जानकारी तुरंत मिट जाएगी और वापस नहीं आएगी। जारी रखें?"
+  },
+  "Could not delete account.": {
+    ko: "회원 탈퇴에 실패했습니다.",
+    zh: "无法注销账号。",
+    hi: "खाता हटाया नहीं जा सका।"
+  },
   "Recover your login ID by verifying the email you used to sign up.": {
     ko: "가입 시 사용한 이메일로 인증 후, 로그인 아이디를 메일로 안내합니다.",
     zh: "验证注册邮箱后，将把登录账号发送到该邮箱。",
@@ -3371,4 +3456,4 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
   }
 };
 
-export const DICTIONARY_KEY_COUNT = 672 as const;
+export const DICTIONARY_KEY_COUNT = 689 as const;

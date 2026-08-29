@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 8686",
+    "dev": "next dev -p 5553",
     "build": "node scripts/copy-pdf-worker.mjs && next build",
     "start": "npx --yes serve out -p 8686",
     "lint": "next lint",

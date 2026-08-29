@@ -18,6 +18,7 @@ type Actions = {
   login: (email: string, pwd: string, captcha?: string) => Promise<void>;
   register: (payload: {email: string; pwd: string; pwdConfirm: string; certNumber: string; memberName: string}) => Promise<void>;
   logout: () => Promise<void>;
+  withdraw: (pwd: string) => Promise<void>;
 };
 
 const useMemberStore = create<State & Actions>((set) => ({
@@ -58,6 +59,11 @@ const useMemberStore = create<State & Actions>((set) => ({
     } catch {
       /* ignore */
     }
+    clearToken('member');
+    set({member: null, hydrated: true});
+  },
+  withdraw: async (pwd) => {
+    await apiPost('bl/withdraw', {pwd}, 'member');
     clearToken('member');
     set({member: null, hydrated: true});
   },

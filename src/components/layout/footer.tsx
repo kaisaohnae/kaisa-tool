@@ -15,6 +15,15 @@ export default function Footer() {
 
   useEffect(() => {
     hydrate();
+    const onSync = () => {
+      hydrate();
+    };
+    window.addEventListener('focus', onSync);
+    document.addEventListener('visibilitychange', onSync);
+    return () => {
+      window.removeEventListener('focus', onSync);
+      document.removeEventListener('visibilitychange', onSync);
+    };
   }, [hydrate]);
 
   return (
@@ -37,7 +46,7 @@ export default function Footer() {
               )}
             </div>
             <p className="site-footer__copy">
-              © 2005 Kaisa ·{' '}
+              © 2005{' '}
               <a href="https://kaisa.co.kr" className="site-footer__copy-link" target="_blank" rel="noopener noreferrer">
                 kaisa.co.kr
               </a>

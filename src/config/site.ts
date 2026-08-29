@@ -8,7 +8,7 @@ export const SITE_DESCRIPTION =
   'Browser-based image, PDF, and text utilities — process files locally without uploading to a server.';
 
 export function getSiteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'http://localhost:8686';
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'http://localhost:5553';
   return raw.replace(/\/+$/, '');
 }
 

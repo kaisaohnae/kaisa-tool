@@ -14,7 +14,7 @@ npm run dev
 RDS로 관리형 데이터베이스 운영하기
 엔진 선택, 서브넷 그룹, 백업·멀티 AZ까지 RDS를 안전하게 올리는 체크포인트를 정리한다.
 
-http://localhost:8686
+http://localhost:5553
 
 ## 빌드 / 배포
 
