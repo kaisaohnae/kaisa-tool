@@ -35,6 +35,7 @@ add('Password, UUID, units, and helpers', '비밀번호·UUID·단위·유틸', 
 add('Compress', '용량 줄이기', '压缩', 'संपीड़ित करें');
 add('Resize', '사이즈 변경', '调整大小', 'आकार बदलें');
 add('Crop', '자르기', '裁剪', 'क्रॉप');
+add('Stroke', '선 그리기', '描边', 'स्ट्रोक');
 add('Rotate & Flip', '회전·뒤집기', '旋转与翻转', 'घुमाएँ और पलटें');
 add('Watermark', '워터마크', '水印', 'वॉटरमार्क');
 add('Background', '배경', '背景', 'पृष्ठभूमि');
@@ -91,6 +92,7 @@ add(
 );
 add('Change width and height.', '가로·세로 크기를 변경합니다.', '更改宽度和高度。', 'चौड़ाई और ऊँचाई बदलें।');
 add('Crop to a selected region.', '원하는 영역만 잘라냅니다.', '裁剪到所选区域。', 'चयनित क्षेत्र क्रॉप करें।');
+add('Draw rectangular outlines on the image.', '이미지 위에 사각형 선을 그립니다.', '在图片上绘制矩形描边。', 'छवि पर आयताकार रेखाएँ बनाएँ।');
 add(
   'Rotate and flip horizontally or vertically.',
   '회전하고 좌우·상하로 뒤집습니다.',
@@ -253,6 +255,12 @@ add(
   '드래그로 영역을 선택하거나 좌표를 입력해 이미지를 자릅니다.',
   '拖动选择区域或输入坐标以裁剪图片。',
   'खींचकर क्षेत्र चुनें या निर्देशांक दर्ज करके छवि क्रॉप करें।'
+);
+add(
+  'Drag on the image to draw rectangular outlines in your chosen color.',
+  '이미지 위를 드래그해 원하는 색으로 사각형 선을 그립니다.',
+  '在图片上拖动，用所选颜色绘制矩形描边。',
+  'चुने रंग में आयताकार रेखाएँ बनाने के लिए छवि पर खींचें।'
 );
 add(
   'Place a text or image watermark on top of the original.',
@@ -465,7 +473,9 @@ add('Drag and drop or click to choose files', '드래그 앤 드롭하거나 클
 add('Unsupported files were skipped.', '지원하지 않는 파일을 제외했습니다.', '已跳过不支持的文件。', 'असमर्थित फ़ाइलें छोड़ दी गईं।');
 add('Remove', '제거', '移除', 'हटाएँ');
 add('Download', '다운로드', '下载', 'डाउनलोड');
+add('Downloading…', '다운로드 중…', '正在下载…', 'डाउनलोड हो रहा है…');
 add('Clear', '지우기', '清除', 'साफ़ करें');
+add('Undo', '되돌리기', '撤销', 'पूर्ववत करें');
 add('Copy', '복사', '复制', 'कॉपी');
 add('Copied to clipboard.', '클립보드에 복사했습니다.', '已复制到剪贴板。', 'क्लिपबोर्ड पर कॉपी हो गया।');
 add('Copy failed.', '복사에 실패했습니다.', '复制失败。', 'कॉपी विफल।');
@@ -493,6 +503,10 @@ add('Success.', '성공했습니다.', '成功。', 'सफल।');
 // Field labels
 add('Quality', '품질', '质量', 'गुणवत्ता');
 add('Width', '너비', '宽度', 'चौड़ाई');
+add('Line width', '선 굵기', '线宽', 'रेखा की चौड़ाई');
+add('Shape', '모양', '形状', 'आकार');
+add('Rectangle', '네모', '矩形', 'आयत');
+add('Line', '라인', '直线', 'रेखा');
 add('Height', '높이', '高度', 'ऊँचाई');
 add('Size', '크기', '大小', 'आकार');
 add('Opacity', '투명도', '不透明度', 'अपारदर्शिता');
@@ -584,8 +598,10 @@ add('Convert to JPG', 'JPG로 변환', '转换为 JPG', 'JPG में बदल
 add('Generating…', '생성 중…', '正在生成…', 'बनाया जा रहा है…');
 add('Generate favicon', 'Favicon 생성', '生成 Favicon', 'फ़ेविकॉन बनाएँ');
 add('Cropping…', '자르는 중…', '正在裁剪…', 'क्रॉप हो रहा है…');
+add('Applying stroke…', '선 적용 중…', '正在应用描边…', 'स्ट्रोक लागू हो रहा है…');
 add('Applying…', '적용 중…', '正在应用…', 'लागू हो रहा है…');
 add('Apply watermark', '워터마크 적용', '应用水印', 'वॉटरमार्क लागू करें');
+add('Apply stroke', '선 적용', '应用描边', 'स्ट्रोक लागू करें');
 add('Loading…', '불러오는 중…', '加载中…', 'लोड हो रहा है…');
 add('Preparing…', '준비 중…', '准备中…', 'तैयार हो रहा है…');
 add('Preparing preview…', '미리보기 준비 중…', '正在准备预览…', 'प्रीव्यू तैयार हो रहा है…');
@@ -616,6 +632,7 @@ add('Did not get smaller than the original. Try a lower quality.', '원본보다
 add('Could not read image info.', '이미지 정보를 읽지 못했습니다.', '无法读取图片信息。', 'छवि जानकारी नहीं पढ़ सके।');
 add('Could not read image.', '이미지를 읽지 못했습니다.', '无法读取图片。', 'छवि नहीं पढ़ सके।');
 add('Crop failed.', '자르기에 실패했습니다.', '裁剪失败。', 'क्रॉप विफल।');
+add('Stroke failed.', '선 그리기에 실패했습니다.', '描边失败。', 'स्ट्रोक विफल।');
 add('Watermark failed.', '워터마크 적용에 실패했습니다.', '水印应用失败。', 'वॉटरमार्क विफल।');
 add('Favicon generation failed.', 'Favicon 생성에 실패했습니다.', 'Favicon 生成失败。', 'फ़ेविकॉन बनाना विफल।');
 add('Could not create preview.', '미리보기를 만들지 못했습니다.', '无法创建预览。', 'प्रीव्यू नहीं बना सके।');
@@ -804,6 +821,8 @@ add(
 );
 add('Original preview', '원본 미리보기', '原图预览', 'मूल प्रीव्यू');
 add('Crop target', '자르기 대상', '裁剪对象', 'क्रॉप लक्ष्य');
+add('Mask outside area', '선택 영역 밖 마스킹', '遮罩选区外区域', 'चयनित क्षेत्र के बाहर मास्क');
+add('Stroke target', '선 그리기 대상', '描边对象', 'स्ट्रोक लक्ष्य');
 add(
   'Combine PDFs in the selected order. Use ↑↓ to reorder.',
   '선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.',

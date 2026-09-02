@@ -40,6 +40,13 @@ export const TOOLS: ToolItem[] = [
     href: '/image/crop/'
   },
   {
+    id: 'image-stroke',
+    category: 'image',
+    title: 'Stroke',
+    description: 'Draw rectangular outlines on the image.',
+    href: '/image/stroke/'
+  },
+  {
     id: 'image-rotate',
     category: 'image',
     title: 'Rotate & Flip',

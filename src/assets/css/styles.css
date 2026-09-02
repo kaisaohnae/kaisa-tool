@@ -936,6 +936,34 @@ body.scrolled #header {
   width: 100%;
 }
 
+.field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  align-self: stretch;
+  flex-basis: 100%;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.field--checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.field--checkbox .field__label {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 @media (max-width: 860px) {
   .markdown-split,
   .color-tool-layout {
@@ -1192,25 +1220,30 @@ body.scrolled #header {
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
-.crop-stage {
-  position: relative;
-  display: inline-block;
+.crop-stage-wrap,
+.stroke-stage-wrap {
+  width: 100%;
   max-width: 100%;
   margin: 0 auto 8px;
-  touch-action: none;
-  user-select: none;
-  cursor: crosshair;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  overflow: hidden;
   background: var(--color-bg-elevated);
 }
 
-.crop-stage img {
+.crop-stage,
+.stroke-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+
+.crop-stage img,
+.stroke-stage img {
   display: block;
   max-width: 100%;
-  max-height: 360px;
-  width: auto;
   height: auto;
   pointer-events: none;
 }
@@ -1220,8 +1253,50 @@ body.scrolled #header {
   box-sizing: border-box;
   border: 2px solid var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
   pointer-events: none;
+}
+
+.crop-stage__rect--masked {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+.stroke-stage__rect {
+  position: absolute;
+  box-sizing: border-box;
+  border-style: solid;
+  background: transparent;
+  pointer-events: none;
+}
+
+.stroke-stage__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.stroke-stage__mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stroke-shape-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stroke-shape-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .pdf-pages-grid {

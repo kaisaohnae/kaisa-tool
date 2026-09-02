@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react';
 import FileDropzone, {ToolPageShell} from '@/components/tool/file-dropzone';
+import {useImageStageDisplay} from '@/hooks/use-image-stage-display';
 import {useObjectUrl} from '@/hooks/use-object-url';
 import {useT} from '@/i18n/locale-context';
 import {detectOutputMime, getImageSize} from '@/modules/image';
@@ -21,12 +22,14 @@ export default function ImageCropTool() {
   const [natural, setNatural] = useState({width: 0, height: 0});
   const [rect, setRect] = useState<CropRect>({x: 0, y: 0, width: 100, height: 100});
   const [aspect, setAspect] = useState<AspectPreset>('free');
+  const [maskOutside, setMaskOutside] = useState(false);
   const [format, setFormat] = useState<'image/png' | 'image/jpeg'>('image/png');
   const [quality, setQuality] = useState(0.92);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{blob: Blob; name: string} | null>(null);
 
+  const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     mode: 'create' | 'move';
@@ -34,11 +37,11 @@ export default function ImageCropTool() {
     startY: number;
     origin: CropRect;
   } | null>(null);
-  const [display, setDisplay] = useState({width: 1, height: 1});
 
   const file = files[0];
   const previewUrl = useObjectUrl(file);
   const resultUrl = useObjectUrl(result?.blob);
+  const {display, updateDisplaySize} = useImageStageDisplay(wrapRef, natural);
   const scaleX = display.width / Math.max(1, natural.width);
   const scaleY = display.height / Math.max(1, natural.height);
 
@@ -71,6 +74,7 @@ export default function ImageCropTool() {
           )
         );
         setFormat(detectOutputMime(file));
+        setMaskOutside(false);
         setResult(null);
         setError('');
       })
@@ -81,18 +85,6 @@ export default function ImageCropTool() {
       cancelled = true;
     };
   }, [file]);
-
-  const updateDisplaySize = useCallback(() => {
-    const el = stageRef.current?.querySelector('img');
-    if (!el) return;
-    setDisplay({width: el.clientWidth || 1, height: el.clientHeight || 1});
-  }, []);
-
-  useEffect(() => {
-    updateDisplaySize();
-    window.addEventListener('resize', updateDisplaySize);
-    return () => window.removeEventListener('resize', updateDisplaySize);
-  }, [previewUrl, natural, updateDisplaySize]);
 
   const toNatural = (clientX: number, clientY: number) => {
     const stage = stageRef.current;
@@ -183,24 +175,33 @@ export default function ImageCropTool() {
       />
 
       {file && previewUrl && natural.width ? (
-        <div
-          ref={stageRef}
-          className="crop-stage"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <img src={previewUrl} alt={t('Crop target')} draggable={false} onLoad={updateDisplaySize} />
+        <div ref={wrapRef} className="crop-stage-wrap">
           <div
-            className="crop-stage__rect"
-            style={{
-              left: rect.x * scaleX,
-              top: rect.y * scaleY,
-              width: rect.width * scaleX,
-              height: rect.height * scaleY
-            }}
-          />
+            ref={stageRef}
+            className="crop-stage"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <img
+              src={previewUrl}
+              alt={t('Crop target')}
+              width={display.width}
+              height={display.height}
+              draggable={false}
+              onLoad={updateDisplaySize}
+            />
+            <div
+              className={`crop-stage__rect${maskOutside ? ' crop-stage__rect--masked' : ''}`}
+              style={{
+                left: rect.x * scaleX,
+                top: rect.y * scaleY,
+                width: rect.width * scaleX,
+                height: rect.height * scaleY
+              }}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -238,6 +239,14 @@ export default function ImageCropTool() {
             <option value="16:9">16:9</option>
             <option value="4:3">4:3</option>
           </select>
+        </label>
+        <label className="field field--checkbox">
+          <input
+            type="checkbox"
+            checked={maskOutside}
+            onChange={e => setMaskOutside(e.target.checked)}
+          />
+          <span className="field__label">{t('Mask outside area')}</span>
         </label>
         <label className="field">
           <span className="field__label">{t('Output format')}</span>

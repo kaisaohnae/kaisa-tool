@@ -69,6 +69,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "裁剪",
     hi: "क्रॉप"
   },
+  "Stroke": {
+    ko: "선 그리기",
+    zh: "描边",
+    hi: "स्ट्रोक"
+  },
   "Rotate & Flip": {
     ko: "회전·뒤집기",
     zh: "旋转与翻转",
@@ -273,6 +278,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "원하는 영역만 잘라냅니다.",
     zh: "裁剪到所选区域。",
     hi: "चयनित क्षेत्र क्रॉप करें।"
+  },
+  "Draw rectangular outlines on the image.": {
+    ko: "이미지 위에 사각형 선을 그립니다.",
+    zh: "在图片上绘制矩形描边。",
+    hi: "छवि पर आयताकार रेखाएँ बनाएँ।"
   },
   "Rotate and flip horizontally or vertically.": {
     ko: "회전하고 좌우·상하로 뒤집습니다.",
@@ -479,6 +489,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "拖动选择区域或输入坐标以裁剪图片。",
     hi: "खींचकर क्षेत्र चुनें या निर्देशांक दर्ज करके छवि क्रॉप करें।"
   },
+  "Drag on the image to draw rectangular outlines in your chosen color.": {
+    ko: "이미지 위를 드래그해 원하는 색으로 사각형 선을 그립니다.",
+    zh: "在图片上拖动，用所选颜色绘制矩形描边。",
+    hi: "चुने रंग में आयताकार रेखाएँ बनाने के लिए छवि पर खींचें।"
+  },
   "Place a text or image watermark on top of the original.": {
     ko: "텍스트 또는 이미지 워터마크를 원본 위에 올립니다.",
     zh: "在原图上叠加文字或图片水印。",
@@ -674,10 +689,20 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "下载",
     hi: "डाउनलोड"
   },
+  "Downloading…": {
+    ko: "다운로드 중…",
+    zh: "正在下载…",
+    hi: "डाउनलोड हो रहा है…"
+  },
   "Clear": {
     ko: "지우기",
     zh: "清除",
     hi: "साफ़ करें"
+  },
+  "Undo": {
+    ko: "되돌리기",
+    zh: "撤销",
+    hi: "पूर्ववत करें"
   },
   "Copy": {
     ko: "복사",
@@ -803,6 +828,26 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "너비",
     zh: "宽度",
     hi: "चौड़ाई"
+  },
+  "Line width": {
+    ko: "선 굵기",
+    zh: "线宽",
+    hi: "रेखा की चौड़ाई"
+  },
+  "Shape": {
+    ko: "모양",
+    zh: "形状",
+    hi: "आकार"
+  },
+  "Rectangle": {
+    ko: "네모",
+    zh: "矩形",
+    hi: "आयत"
+  },
+  "Line": {
+    ko: "라인",
+    zh: "直线",
+    hi: "रेखा"
   },
   "Height": {
     ko: "높이",
@@ -1259,6 +1304,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "正在裁剪…",
     hi: "क्रॉप हो रहा है…"
   },
+  "Applying stroke…": {
+    ko: "선 적용 중…",
+    zh: "正在应用描边…",
+    hi: "स्ट्रोक लागू हो रहा है…"
+  },
   "Applying…": {
     ko: "적용 중…",
     zh: "正在应用…",
@@ -1268,6 +1318,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "워터마크 적용",
     zh: "应用水印",
     hi: "वॉटरमार्क लागू करें"
+  },
+  "Apply stroke": {
+    ko: "선 적용",
+    zh: "应用描边",
+    hi: "स्ट्रोक लागू करें"
   },
   "Loading…": {
     ko: "불러오는 중…",
@@ -1408,6 +1463,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "자르기에 실패했습니다.",
     zh: "裁剪失败。",
     hi: "क्रॉप विफल।"
+  },
+  "Stroke failed.": {
+    ko: "선 그리기에 실패했습니다.",
+    zh: "描边失败。",
+    hi: "स्ट्रोक विफल।"
   },
   "Watermark failed.": {
     ko: "워터마크 적용에 실패했습니다.",
@@ -2289,6 +2349,16 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "裁剪对象",
     hi: "क्रॉप लक्ष्य"
   },
+  "Mask outside area": {
+    ko: "선택 영역 밖 마스킹",
+    zh: "遮罩选区外区域",
+    hi: "चयनित क्षेत्र के बाहर मास्क"
+  },
+  "Stroke target": {
+    ko: "선 그리기 대상",
+    zh: "描边对象",
+    hi: "स्ट्रोक लक्ष्य"
+  },
   "Combine PDFs in the selected order. Use ↑↓ to reorder.": {
     ko: "선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.",
     zh: "按所选顺序合并 PDF。可用 ↑↓ 调整顺序。",
@@ -3089,151 +3159,6 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "没有可复制的结果。",
     hi: "कॉपी करने के लिए परिणाम नहीं।"
   },
-  "Requests": {
-    ko: "댓글",
-    zh: "评论",
-    hi: "टिप्पणियाँ"
-  },
-  "Comments": {
-    ko: "댓글",
-    zh: "评论",
-    hi: "टिप्पणियाँ"
-  },
-  "Nickname": {
-    ko: "닉네임",
-    zh: "昵称",
-    hi: "उपनाम"
-  },
-  "Request": {
-    ko: "내용",
-    zh: "内容",
-    hi: "संदेश"
-  },
-  "Comment": {
-    ko: "댓글",
-    zh: "评论",
-    hi: "टिप्पणी"
-  },
-  "Submit": {
-    ko: "등록",
-    zh: "提交",
-    hi: "भेजें"
-  },
-  "Submitting…": {
-    ko: "등록 중…",
-    zh: "提交中…",
-    hi: "भेजा जा रहा है…"
-  },
-  "No requests yet.": {
-    ko: "아직 요청사항이 없습니다.",
-    zh: "暂无需求。",
-    hi: "अभी कोई अनुरोध नहीं।"
-  },
-  "Request submitted.": {
-    ko: "요청사항이 등록되었습니다.",
-    zh: "已提交需求。",
-    hi: "अनुरोध भेज दिया गया।"
-  },
-  "Failed to load requests.": {
-    ko: "요청사항을 불러오지 못했습니다.",
-    zh: "无法加载需求。",
-    hi: "अनुरोध लोड नहीं हो सके।"
-  },
-  "Failed to submit request.": {
-    ko: "요청사항 등록에 실패했습니다.",
-    zh: "提交失败。",
-    hi: "अनुरोध भेजने में विफल।"
-  },
-  "Nickname and request are required.": {
-    ko: "닉네임과 내용을 입력해 주세요.",
-    zh: "请填写昵称和内容。",
-    hi: "उपनाम और संदेश आवश्यक हैं।"
-  },
-  "Leave a comment": {
-    ko: "댓글을 남겨 주세요",
-    zh: "留下评论",
-    hi: "टिप्पणी लिखें"
-  },
-  "Writing as {name}": {
-    ko: "{name}님으로 작성 중",
-    zh: "正在以 {name} 的身份撰写",
-    hi: "{name} के रूप में लिख रहे हैं"
-  },
-  "Write a reply": {
-    ko: "답글을 입력해 주세요",
-    zh: "填写回复",
-    hi: "जवाब लिखें"
-  },
-  "Post reply": {
-    ko: "답글 등록",
-    zh: "提交回复",
-    hi: "जवाब भेजें"
-  },
-  "No comments yet. Be the first.": {
-    ko: "아직 댓글이 없습니다. 첫 댓글을 남겨보세요.",
-    zh: "暂无评论。来写第一条吧。",
-    hi: "अभी कोई टिप्पणी नहीं। पहली लिखें।"
-  },
-  "No comments yet.": {
-    ko: "아직 댓글이 없습니다.",
-    zh: "暂无评论。",
-    hi: "अभी कोई टिप्पणी नहीं।"
-  },
-  "Comment submitted.": {
-    ko: "댓글이 등록되었습니다.",
-    zh: "已提交评论。",
-    hi: "टिप्पणी भेज दी गई।"
-  },
-  "Failed to load comments.": {
-    ko: "댓글을 불러오지 못했습니다.",
-    zh: "无法加载评论。",
-    hi: "टिप्पणियाँ लोड नहीं हो सकीं।"
-  },
-  "Failed to submit comment.": {
-    ko: "댓글 등록에 실패했습니다.",
-    zh: "提交失败。",
-    hi: "टिप्पणी भेजने में विफल।"
-  },
-  "Comment is required.": {
-    ko: "내용을 입력해 주세요.",
-    zh: "请填写内容。",
-    hi: "संदेश आवश्यक है।"
-  },
-  "Log in to leave a comment.": {
-    ko: "댓글은 로그인 후 작성할 수 있습니다.",
-    zh: "登录后才能发表评论。",
-    hi: "टिप्पणी के लिए लॉगिन करें।"
-  },
-  "Complete the robot check.": {
-    ko: "로봇 방지 확인을 완료해 주세요.",
-    zh: "请完成人机验证。",
-    hi: "रोबोट जांच पूरी करें।"
-  },
-  "Reply": {
-    ko: "답글",
-    zh: "回复",
-    hi: "जवाब"
-  },
-  "Reply submitted.": {
-    ko: "답글이 등록되었습니다.",
-    zh: "已提交回复。",
-    hi: "जवाब भेज दिया गया।"
-  },
-  "Failed to submit reply.": {
-    ko: "답글 등록에 실패했습니다.",
-    zh: "回复提交失败。",
-    hi: "जवाब भेजने में विफल।"
-  },
-  "Lorem Ipsum": {
-    ko: "더미 텍스트",
-    zh: "占位文本",
-    hi: "लोरेम इप्सम"
-  },
-  "Generate placeholder text for layouts and mockups.": {
-    ko: "레이아웃·목업용 더미 텍스트를 생성합니다.",
-    zh: "生成用于布局和原型的占位文本。",
-    hi: "लेआउट और मॉकअप के लिए प्लेसहोल्डर टेक्स्ट बनाएं।"
-  },
   "Login": {
     ko: "로그인",
     zh: "登录",
@@ -3394,26 +3319,6 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "更改失败。",
     hi: "परिवर्तन विफल।"
   },
-  "Delete account": {
-    ko: "회원 탈퇴",
-    zh: "注销账号",
-    hi: "खाता हटाएँ"
-  },
-  "Enter your password to permanently delete this account.": {
-    ko: "비밀번호를 입력하면 회원 정보가 즉시 삭제됩니다.",
-    zh: "输入密码后将立即删除账号信息。",
-    hi: "पासवर्ड डालते ही खाता जानकारी हमेशा के लिए हट जाएगी।"
-  },
-  "Delete this account? This cannot be undone.": {
-    ko: "탈퇴하면 회원 정보가 즉시 삭제되며 되돌릴 수 없습니다. 계속할까요?",
-    zh: "注销后账号信息将立即删除且无法恢复。要继续吗？",
-    hi: "खाता हटाने पर जानकारी तुरंत मिट जाएगी और वापस नहीं आएगी। जारी रखें?"
-  },
-  "Could not delete account.": {
-    ko: "회원 탈퇴에 실패했습니다.",
-    zh: "无法注销账号。",
-    hi: "खाता हटाया नहीं जा सका।"
-  },
   "Recover your login ID by verifying the email you used to sign up.": {
     ko: "가입 시 사용한 이메일로 인증 후, 로그인 아이디를 메일로 안내합니다.",
     zh: "验证注册邮箱后，将把登录账号发送到该邮箱。",
@@ -3451,9 +3356,9 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
   },
   "Could not reset password.": {
     ko: "비밀번호 변경에 실패했습니다.",
-    zh: "无法重置密码。",
+    zh: "无法重置密码।",
     hi: "पासवर्ड रीसेट नहीं हो सका।"
-  }
+  },
 };
 
-export const DICTIONARY_KEY_COUNT = 689 as const;
+export const DICTIONARY_KEY_COUNT = 671 as const;
