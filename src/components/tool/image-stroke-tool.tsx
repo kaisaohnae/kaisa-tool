@@ -13,7 +13,13 @@ import {
   type StrokeShape,
   type StrokeType
 } from '@/modules/image/stroke';
-import {TEXT_OUTLINE_COLOR, TEXT_OUTLINE_WIDTH, type TextLayer} from '@/modules/image/text';
+import {
+  DEFAULT_TEXT_FONT_FAMILY,
+  TEXT_OUTLINE_COLOR,
+  TEXT_OUTLINE_WIDTH,
+  textFontWeightCss,
+  type TextLayer
+} from '@/modules/image/text';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
 type ToolMode = StrokeType | 'text';
@@ -125,7 +131,7 @@ export default function ImageStrokeTool() {
     setSelectedTextId(layer.id);
     setFontSize(layer.fontSize);
     setColor(layer.color);
-    setBold(layer.bold);
+    setBold(layer.fontWeight === 'bold');
     setOutlineWidth(layer.outlineWidth);
     setOutlineColor(layer.outlineColor);
     setResult(null);
@@ -160,8 +166,9 @@ export default function ImageStrokeTool() {
       x,
       y,
       fontSize,
+      fontFamily: DEFAULT_TEXT_FONT_FAMILY,
+      fontWeight: bold ? 'bold' : 'normal',
       color,
-      bold,
       outlineWidth,
       outlineColor
     };
@@ -417,7 +424,7 @@ export default function ImageStrokeTool() {
                     top: layer.y * scaleY,
                     fontSize: size,
                     color: layer.color,
-                    fontWeight: layer.bold ? 'bold' : 'normal',
+                    fontWeight: textFontWeightCss(layer.fontWeight),
                     WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px ${layer.outlineColor}` : undefined,
                     paintOrder: 'stroke fill'
                   }}
@@ -489,8 +496,10 @@ export default function ImageStrokeTool() {
                     <label className="text-layer-list__control text-layer-list__control--checkbox">
                       <input
                         type="checkbox"
-                        checked={layer.bold}
-                        onChange={e => updateText(layer.id, {bold: e.target.checked})}
+                        checked={layer.fontWeight === 'bold'}
+                        onChange={e =>
+                          updateText(layer.id, {fontWeight: e.target.checked ? 'bold' : 'normal'})
+                        }
                         onFocus={() => selectText(layer)}
                       />
                       <span className="text-layer-list__control-label">{t('Bold')}</span>

@@ -6,7 +6,14 @@ import {useImageStageDisplay} from '@/hooks/use-image-stage-display';
 import {useObjectUrl} from '@/hooks/use-object-url';
 import {useT} from '@/i18n/locale-context';
 import {detectOutputMime, getImageSize} from '@/modules/image';
-import {applyTextLayers, type TextLayer} from '@/modules/image/text';
+import {
+  applyTextLayers,
+  DEFAULT_TEXT_FONT_FAMILY,
+  TEXT_OUTLINE_COLOR,
+  TEXT_OUTLINE_WIDTH,
+  textFontWeightCss,
+  type TextLayer
+} from '@/modules/image/text';
 import {downloadBlob, formatBytes, replaceExtension} from '@/modules/shared/file';
 
 interface TextItem extends TextLayer {
@@ -115,8 +122,11 @@ export default function ImageTextTool() {
       x,
       y,
       fontSize,
+      fontFamily: DEFAULT_TEXT_FONT_FAMILY,
+      fontWeight: bold ? 'bold' : 'normal',
       color,
-      bold
+      outlineWidth: TEXT_OUTLINE_WIDTH,
+      outlineColor: TEXT_OUTLINE_COLOR
     };
     setLayers(prev => [...prev, item]);
     setSelectedId(item.id);
@@ -136,7 +146,7 @@ export default function ImageTextTool() {
     setSelectedId(layer.id);
     setFontSize(layer.fontSize);
     setColor(layer.color);
-    setBold(layer.bold);
+    setBold(layer.fontWeight === 'bold');
     const pt = toNatural(e.clientX, e.clientY);
     dragRef.current = {
       id: layer.id,
@@ -176,7 +186,7 @@ export default function ImageTextTool() {
     updateLayer(selectedId, patch);
     if (patch.fontSize !== undefined) setFontSize(patch.fontSize);
     if (patch.color !== undefined) setColor(patch.color);
-    if (patch.bold !== undefined) setBold(patch.bold);
+    if (patch.fontWeight !== undefined) setBold(patch.fontWeight === 'bold');
   };
 
   const run = async () => {
@@ -256,7 +266,7 @@ export default function ImageTextTool() {
                     style={{
                       fontSize: size,
                       color: layer.color,
-                      fontWeight: layer.bold ? 'bold' : 'normal',
+                      fontWeight: textFontWeightCss(layer.fontWeight),
                       minWidth: `${Math.max(4, layer.content.length + 1)}ch`
                     }}
                     onChange={e => updateLayer(layer.id, {content: e.target.value})}
@@ -264,7 +274,7 @@ export default function ImageTextTool() {
                       setSelectedId(layer.id);
                       setFontSize(layer.fontSize);
                       setColor(layer.color);
-                      setBold(layer.bold);
+                      setBold(layer.fontWeight === 'bold');
                     }}
                     onPointerDown={e => onLayerPointerDown(e, layer)}
                   />
@@ -301,9 +311,9 @@ export default function ImageTextTool() {
         <label className="field field--checkbox">
           <input
             type="checkbox"
-            checked={selectedLayer?.bold ?? bold}
+            checked={selectedLayer ? selectedLayer.fontWeight === 'bold' : bold}
             disabled={!selectedId}
-            onChange={e => patchSelectedStyle({bold: e.target.checked})}
+            onChange={e => patchSelectedStyle({fontWeight: e.target.checked ? 'bold' : 'normal'})}
           />
           <span className="field__label">{t('Bold')}</span>
         </label>
