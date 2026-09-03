@@ -43,7 +43,7 @@ export const TOOLS: ToolItem[] = [
     id: 'image-stroke',
     category: 'image',
     title: 'Stroke',
-    description: 'Draw rectangular outlines on the image.',
+    description: 'Draw shapes and place text on the image.',
     href: '/image/stroke/'
   },
   {

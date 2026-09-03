@@ -93,6 +93,7 @@ add(
 add('Change width and height.', '가로·세로 크기를 변경합니다.', '更改宽度和高度。', 'चौड़ाई और ऊँचाई बदलें।');
 add('Crop to a selected region.', '원하는 영역만 잘라냅니다.', '裁剪到所选区域。', 'चयनित क्षेत्र क्रॉप करें।');
 add('Draw rectangular outlines on the image.', '이미지 위에 사각형 선을 그립니다.', '在图片上绘制矩形描边。', 'छवि पर आयताकार रेखाएँ बनाएँ।');
+add('Click on the image to place and move text.', '이미지를 클릭해 텍스트를 배치하고 드래그로 옮깁니다.', '点击图片放置文本，拖动可移动。', 'छवि पर क्लिक करके टेक्स्ट रखें, खींचकर स्थान बदलें।');
 add(
   'Rotate and flip horizontally or vertically.',
   '회전하고 좌우·상하로 뒤집습니다.',
@@ -261,6 +262,12 @@ add(
   '이미지 위를 드래그해 원하는 색으로 사각형 선을 그립니다.',
   '在图片上拖动，用所选颜色绘制矩形描边。',
   'चुने रंग में आयताकार रेखाएँ बनाने के लिए छवि पर खींचें।'
+);
+add(
+  'Click on the image to place text. Drag to move it.',
+  '이미지를 클릭해 텍스트를 넣고, 드래그로 위치를 옮깁니다.',
+  '点击图片放置文本，拖动可移动位置。',
+  'छवि पर क्लिक करके टेक्स्ट रखें, खींचकर स्थान बदलें।'
 );
 add(
   'Place a text or image watermark on top of the original.',
@@ -469,6 +476,8 @@ add(
 
 // ——— Common UI ———
 add('Drop files here or click', '파일을 끌어다 놓거나 클릭', '将文件拖到此处或点击', 'फ़ाइलें यहाँ छोड़ें या क्लिक करें');
+add('Drop files here, click, or paste', '파일을 끌어다 놓거나, 클릭하거나, 붙여넣기', '拖放、点击或粘贴文件', 'फ़ाइलें छोड़ें, क्लिक करें या पेस्ट करें');
+add('Paste with Ctrl+V', 'Ctrl+V로 붙여넣기', 'Ctrl+V 粘贴', 'Ctrl+V से पेस्ट करें');
 add('Drag and drop or click to choose files', '드래그 앤 드롭하거나 클릭하여 파일을 선택하세요', '拖放或点击选择文件', 'खींचकर छोड़ें या क्लिक करके फ़ाइलें चुनें');
 add('Unsupported files were skipped.', '지원하지 않는 파일을 제외했습니다.', '已跳过不支持的文件。', 'असमर्थित फ़ाइलें छोड़ दी गईं।');
 add('Remove', '제거', '移除', 'हटाएँ');
@@ -633,6 +642,7 @@ add('Could not read image info.', '이미지 정보를 읽지 못했습니다.',
 add('Could not read image.', '이미지를 읽지 못했습니다.', '无法读取图片。', 'छवि नहीं पढ़ सके।');
 add('Crop failed.', '자르기에 실패했습니다.', '裁剪失败。', 'क्रॉप विफल।');
 add('Stroke failed.', '선 그리기에 실패했습니다.', '描边失败。', 'स्ट्रोक विफल।');
+add('Text failed.', '텍스트 적용에 실패했습니다.', '文本应用失败。', 'टेक्स्ट विफल।');
 add('Watermark failed.', '워터마크 적용에 실패했습니다.', '水印应用失败。', 'वॉटरमार्क विफल।');
 add('Favicon generation failed.', 'Favicon 생성에 실패했습니다.', 'Favicon 生成失败。', 'फ़ेविकॉन बनाना विफल।');
 add('Could not create preview.', '미리보기를 만들지 못했습니다.', '无法创建预览。', 'प्रीव्यू नहीं बना सके।');
@@ -766,6 +776,21 @@ add('All processing stays in your browser.', '모든 처리는 브라우저에�
 add('Width (px)', '가로 (px)', '宽度 (px)', 'चौड़ाई (px)');
 add('Height (px)', '세로 (px)', '高度 (px)', 'ऊँचाई (px)');
 add('Font size', '글자 크기', '字号', 'फ़ॉन्ट आकार');
+add('Font family', '글꼴', '字体', 'फ़ॉन्ट परिवार');
+add('Font weight', '글자 굵기', '字重', 'फ़ॉन्ट वज़न');
+add('Bold', '굵게', '粗体', 'बोल्ड');
+add('Clear', '선명', '清晰', 'स्पष्ट');
+add('None', '없음', '无', 'कोई नहीं');
+add('Outline width', '테두리 굵기', '描边宽度', 'आउटलाइन चौड़ाई');
+add('Outline color', '테두리 색상', '描边颜色', 'आउटलाइन रंग');
+add('Add text', '텍스트 추가', '添加文本', 'टेक्स्ट जोड़ें');
+add('Text layers', '텍스트 목록', '文本列表', 'टेक्स्ट सूची');
+add('Tool', '도구', '工具', 'उपकरण');
+add('Draw shapes and place text on the image, then download.', '도형을 그리고 텍스트를 배치한 뒤 다운로드합니다.', '绘制形状并放置文本，然后下载。', 'आकृतियाँ बनाएँ, टेक्स्ट रखें, फिर डाउनलोड करें।');
+add('Draw shapes and place text on the image.', '도형을 그리고 텍스트를 배치합니다.', '在图片上绘制形状并放置文本。', 'छवि पर आकृतियाँ बनाएँ और टेक्स्ट रखें।');
+add('Annotation failed.', '편집 적용에 실패했습니다.', '标注失败。', 'एनोटेशन विफल।');
+add('Annotation target', '편집 대상', '标注对象', 'एनोटेशन लक्ष्य');
+add('Enter text', '텍스트 입력', '输入文本', 'टेक्स्ट दर्ज करें');
 add('Text', '텍스트', '文本', 'टेक्स्ट');
 add('Tile repeat', '타일 반복', '平铺重复', 'टाइल दोहराएँ');
 add('Image scale', '이미지 배율', '图片缩放', 'छवि स्केल');
@@ -823,6 +848,7 @@ add('Original preview', '원본 미리보기', '原图预览', 'मूल प्
 add('Crop target', '자르기 대상', '裁剪对象', 'क्रॉप लक्ष्य');
 add('Mask outside area', '선택 영역 밖 마스킹', '遮罩选区外区域', 'चयनित क्षेत्र के बाहर मास्क');
 add('Stroke target', '선 그리기 대상', '描边对象', 'स्ट्रोक लक्ष्य');
+add('Text target', '텍스트 대상', '文本对象', 'टेक्स्ट लक्ष्य');
 add(
   'Combine PDFs in the selected order. Use ↑↓ to reorder.',
   '선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.',

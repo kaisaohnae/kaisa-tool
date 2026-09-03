@@ -1,7 +1,8 @@
 'use client';
 
-import {useCallback, useRef, useState, type DragEvent, type ReactNode} from 'react';
+import {useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode} from 'react';
 import {usePathname} from 'next/navigation';
+import {registerPasteTarget, unregisterPasteTarget} from '@/modules/shared/clipboard-paste';
 import {filterAcceptedFiles, formatBytes} from '@/modules/shared/file';
 import {pathToToolKey} from '@/modules/shared/tool-key';
 import {useT} from '@/i18n/locale-context';
@@ -12,6 +13,7 @@ interface FileDropzoneProps {
   accept: string;
   multiple?: boolean;
   sortable?: boolean;
+  enablePaste?: boolean;
   files: File[];
   onChange: (files: File[]) => void;
   title?: string;
@@ -22,6 +24,7 @@ export default function FileDropzone({
   accept,
   multiple = false,
   sortable = false,
+  enablePaste = true,
   files,
   onChange,
   title,
@@ -31,7 +34,8 @@ export default function FileDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(false);
   const [rejectHint, setRejectHint] = useState('');
-  const dropTitle = t(title ?? 'Drop files here or click');
+  const dropTitle = t(title ?? 'Drop files here, click, or paste');
+  const hintParts = [hint ? t(hint) : '', enablePaste ? t('Paste with Ctrl+V') : ''].filter(Boolean);
 
   const addFiles = useCallback(
     (list: FileList | File[]) => {
@@ -43,6 +47,27 @@ export default function FileDropzone({
     },
     [accept, files, multiple, onChange, t]
   );
+
+  const pasteTargetRef = useRef({accept, addFiles});
+  pasteTargetRef.current = {accept, addFiles};
+
+  useEffect(() => {
+    if (!enablePaste) return;
+    const target = {
+      accept,
+      addFiles: (next: File[]) => pasteTargetRef.current.addFiles(next)
+    };
+    registerPasteTarget(target);
+    return () => unregisterPasteTarget(target);
+  }, [accept, enablePaste]);
+
+  const activatePaste = useCallback(() => {
+    if (!enablePaste) return;
+    registerPasteTarget({
+      accept,
+      addFiles: (next: File[]) => pasteTargetRef.current.addFiles(next)
+    });
+  }, [accept, enablePaste]);
 
   const move = (index: number, dir: -1 | 1) => {
     const next = index + dir;
@@ -69,10 +94,16 @@ export default function FileDropzone({
         }}
         onDragLeave={() => setActive(false)}
         onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => {
+          activatePaste();
+          inputRef.current?.click();
+        }}
+        onFocus={activatePaste}
+        onMouseEnter={activatePaste}
+        tabIndex={enablePaste ? 0 : undefined}
       >
         <p className="dropzone__title">{dropTitle}</p>
-        {hint ? <p className="dropzone__hint">{t(hint)}</p> : null}
+        {hintParts.length ? <p className="dropzone__hint">{hintParts.join(' · ')}</p> : null}
         <input
           ref={inputRef}
           className="dropzone__input"

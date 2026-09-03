@@ -137,6 +137,31 @@ export function filterAcceptedFiles(files: FileList | File[], accept: string): F
   return Array.from(files).filter(file => matchesAccept(file, accept));
 }
 
+export function normalizePastedFile(file: File): File {
+  if (file.name) return file;
+  const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/').pop() || 'png';
+  return new File([file], `pasted-image.${ext}`, {type: file.type, lastModified: Date.now()});
+}
+
+export function filesFromClipboard(clipboardData: DataTransfer | null, accept: string): File[] {
+  if (!clipboardData) return [];
+  const files: File[] = [];
+
+  for (const item of Array.from(clipboardData.items)) {
+    if (item.kind !== 'file') continue;
+    const file = item.getAsFile();
+    if (file) files.push(normalizePastedFile(file));
+  }
+
+  if (!files.length && clipboardData.files.length) {
+    for (const file of Array.from(clipboardData.files)) {
+      files.push(normalizePastedFile(file));
+    }
+  }
+
+  return filterAcceptedFiles(files, accept);
+}
+
 export async function fileToJpegBytes(file: File, quality = 0.92): Promise<Uint8Array> {
   const img = await loadImageFromFile(file);
   try {

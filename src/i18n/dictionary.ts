@@ -284,6 +284,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "在图片上绘制矩形描边。",
     hi: "छवि पर आयताकार रेखाएँ बनाएँ।"
   },
+  "Click on the image to place and move text.": {
+    ko: "이미지를 클릭해 텍스트를 배치하고 드래그로 옮깁니다.",
+    zh: "点击图片放置文本，拖动可移动。",
+    hi: "छवि पर क्लिक करके टेक्स्ट रखें, खींचकर स्थान बदलें।"
+  },
   "Rotate and flip horizontally or vertically.": {
     ko: "회전하고 좌우·상하로 뒤집습니다.",
     zh: "旋转并水平或垂直翻转。",
@@ -494,6 +499,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "在图片上拖动，用所选颜色绘制矩形描边。",
     hi: "चुने रंग में आयताकार रेखाएँ बनाने के लिए छवि पर खींचें।"
   },
+  "Click on the image to place text. Drag to move it.": {
+    ko: "이미지를 클릭해 텍스트를 넣고, 드래그로 위치를 옮깁니다.",
+    zh: "点击图片放置文本，拖动可移动位置。",
+    hi: "छवि पर क्लिक करके टेक्स्ट रखें, खींचकर स्थान बदलें।"
+  },
   "Place a text or image watermark on top of the original.": {
     ko: "텍스트 또는 이미지 워터마크를 원본 위에 올립니다.",
     zh: "在原图上叠加文字或图片水印。",
@@ -668,6 +678,16 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "파일을 끌어다 놓거나 클릭",
     zh: "将文件拖到此处或点击",
     hi: "फ़ाइलें यहाँ छोड़ें या क्लिक करें"
+  },
+  "Drop files here, click, or paste": {
+    ko: "파일을 끌어다 놓거나, 클릭하거나, 붙여넣기",
+    zh: "拖放、点击或粘贴文件",
+    hi: "फ़ाइलें छोड़ें, क्लिक करें या पेस्ट करें"
+  },
+  "Paste with Ctrl+V": {
+    ko: "Ctrl+V로 붙여넣기",
+    zh: "Ctrl+V 粘贴",
+    hi: "Ctrl+V से पेस्ट करें"
   },
   "Drag and drop or click to choose files": {
     ko: "드래그 앤 드롭하거나 클릭하여 파일을 선택하세요",
@@ -1469,6 +1489,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "描边失败。",
     hi: "स्ट्रोक विफल।"
   },
+  "Text failed.": {
+    ko: "텍스트 적용에 실패했습니다.",
+    zh: "文本应用失败。",
+    hi: "टेक्स्ट विफल।"
+  },
   "Watermark failed.": {
     ko: "워터마크 적용에 실패했습니다.",
     zh: "水印应用失败。",
@@ -2124,6 +2149,61 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     zh: "字号",
     hi: "फ़ॉन्ट आकार"
   },
+  "Bold": {
+    ko: "굵게",
+    zh: "粗体",
+    hi: "बोल्ड"
+  },
+  "Outline width": {
+    ko: "테두리 굵기",
+    zh: "描边宽度",
+    hi: "आउटलाइन चौड़ाई"
+  },
+  "Outline color": {
+    ko: "테두리 색상",
+    zh: "描边颜色",
+    hi: "आउटलाइन रंग"
+  },
+  "Add text": {
+    ko: "텍스트 추가",
+    zh: "添加文本",
+    hi: "टेक्स्ट जोड़ें"
+  },
+  "Text layers": {
+    ko: "텍스트 목록",
+    zh: "文本列表",
+    hi: "टेक्स्ट सूची"
+  },
+  "Tool": {
+    ko: "도구",
+    zh: "工具",
+    hi: "उपकरण"
+  },
+  "Draw shapes and place text on the image, then download.": {
+    ko: "도형을 그리고 텍스트를 배치한 뒤 다운로드합니다.",
+    zh: "绘制形状并放置文本，然后下载。",
+    hi: "आकृतियाँ बनाएँ, टेक्स्ट रखें, फिर डाउनलोड करें।"
+  },
+  "Draw shapes and place text on the image.": {
+    ko: "도형을 그리고 텍스트를 배치합니다.",
+    zh: "在图片上绘制形状并放置文本。",
+    hi: "छवि पर आकृतियाँ बनाएँ और टेक्स्ट रखें।"
+  },
+  "Annotation failed.": {
+    ko: "편집 적용에 실패했습니다.",
+    zh: "标注失败。",
+    hi: "एनोटेशन विफल।"
+  },
+  "Annotation target": {
+    ko: "편집 대상",
+    zh: "标注对象",
+    hi: "एनोटेशन लक्ष्य"
+  },
+  "Enter text": {
+    ko: "텍스트 입력",
+    zh: "输入文本",
+    hi: "टेक्स्ट दर्ज करें"
+  },
   "Text": {
     ko: "텍스트",
     zh: "文本",
@@ -2358,6 +2438,11 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
     ko: "선 그리기 대상",
     zh: "描边对象",
     hi: "स्ट्रोक लक्ष्य"
+  },
+  "Text target": {
+    ko: "텍스트 대상",
+    zh: "文本对象",
+    hi: "टेक्स्ट लक्ष्य"
   },
   "Combine PDFs in the selected order. Use ↑↓ to reorder.": {
     ko: "선택한 순서대로 PDF를 하나로 합칩니다. ↑↓로 순서를 바꿀 수 있습니다.",
@@ -3361,4 +3446,4 @@ export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', strin
   },
 };
 
-export const DICTIONARY_KEY_COUNT = 671 as const;
+export const DICTIONARY_KEY_COUNT = 688 as const;
