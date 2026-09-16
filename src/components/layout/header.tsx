@@ -8,6 +8,7 @@ import ThemeToggle from '@/components/layout/theme-toggle';
 import {useT} from '@/i18n/locale-context';
 
 const MENU_ITEMS = [
+  {href: '/photo', label: 'Image Editor', match: '/photo', newWindow: true},
   {href: '/image/compress/', label: 'Image', match: '/image'},
   {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
   {href: '/format/json/', label: 'FORMAT', match: '/format'},
@@ -52,7 +53,7 @@ export default function Header() {
     const isActive = pathname === item.match || pathname.startsWith(`${item.match}/`);
     return (
       <li key={item.href} className={isActive ? 'menu__item menu__item--active' : 'menu__item'}>
-        <Link href={item.href} className="menu__link" aria-current={isActive ? 'page' : undefined}>
+        <Link href={item.href} className="menu__link" target={'newWindow' in item ? '_blank' : undefined} rel={'newWindow' in item ? 'noopener noreferrer' : undefined} aria-current={isActive ? 'page' : undefined}>
           {t(item.label)}
         </Link>
       </li>
@@ -85,9 +86,9 @@ export default function Header() {
       <div className="site-shell site-shell--header">
         <div className="header__top site-shell__inner">
           <p className="header__logo">
-            <Link href="/image/compress/" aria-label="Kaisa Tool Home">
+            <a href="https://kaisa.co.kr" aria-label="Kaisa">
               <IconLogo width={100} height={42} />
-            </Link>
+            </a>
           </p>
           <div className="header__actions">
             <nav className="menu menu--desktop" aria-label={t('Main navigation')}>

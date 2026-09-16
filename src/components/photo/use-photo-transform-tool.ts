@@ -1,6 +1,8 @@
-import {type Dispatch, type MutableRefObject, type RefObject, type SetStateAction, useCallback} from 'react';
+import {type Dispatch, type MutableRefObject, type RefObject, type SetStateAction, useCallback, useRef} from 'react';
 import {
   clearSelectionArea,
+  cloneCanvas,
+  copySelectionArea,
   createLayerCanvas,
   drawTransformedImage,
   getOpaqueBounds,
@@ -11,8 +13,8 @@ import {
 } from '@/modules/photo';
 
 // Free-transform lifecycle for the active raster layer: begin cuts the selected (or opaque-bounds)
-// region into a floating source canvas, apply draws it back transformed, cancel rolls back via
-// history. Pulled out of PhotoEditor as a pure move (no behavior change).
+// region into a floating source canvas, apply draws it back transformed, and cancel restores
+// the original layer canvas.
 export function usePhotoTransformTool({
   hasDoc,
   activeLayer,
@@ -21,10 +23,9 @@ export function usePhotoTransformTool({
   height,
   transform,
   transformSourceRef,
+  selectionMaskRef,
   buffersRef,
-  historyIndexRef,
   pushHistory,
-  applyHistory,
   setTransform,
   setTool,
   setSelection,
@@ -37,26 +38,31 @@ export function usePhotoTransformTool({
   height: number;
   transform: TransformState | null;
   transformSourceRef: MutableRefObject<HTMLCanvasElement | null>;
+  selectionMaskRef: MutableRefObject<HTMLCanvasElement | null>;
   buffersRef: RefObject<Map<string, HTMLCanvasElement>>;
-  historyIndexRef: RefObject<number>;
   pushHistory: (label: string) => void;
-  applyHistory: (index: number) => void;
   setTransform: Dispatch<SetStateAction<TransformState | null>>;
   setTool: (tool: PhotoTool) => void;
   setSelection: Dispatch<SetStateAction<PhotoSelection | null>>;
   setStatus: (status: string) => void;
 }) {
+  const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const beginTransform = useCallback(() => {
-    if (!hasDoc || !activeLayer || activeLayer.kind !== 'raster') return;
+    if (transform || transformSourceRef.current) return;
+    if (!hasDoc || !activeLayer) return;
+    if (activeLayer.locked || activeLayer.kind !== 'raster') {
+      setStatus(activeLayer.locked ? 'Unlock the layer before transforming' : 'Rasterize the text layer before transforming');
+      return;
+    }
     const canvas = buffersRef.current.get(activeLayer.id);
     if (!canvas) return;
+    originalCanvasRef.current = cloneCanvas(canvas);
+    pushHistory('Free Transform');
     let box = selection;
     let source: HTMLCanvasElement;
     if (box && box.w > 0 && box.h > 0) {
-      source = createLayerCanvas(box.w, box.h);
-      const ctx = source.getContext('2d');
-      if (ctx) ctx.drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-      clearSelectionArea(canvas, box);
+      source = copySelectionArea(canvas, box, selectionMaskRef.current);
+      clearSelectionArea(canvas, box, selectionMaskRef.current);
     } else {
       const bounds = getOpaqueBounds(canvas) ?? {x: 0, y: 0, w: width, h: height};
       box = {shape: 'rect', ...bounds};
@@ -65,7 +71,6 @@ export function usePhotoTransformTool({
       if (ctx) ctx.drawImage(canvas, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
       clearSelectionArea(canvas, {shape: 'rect', ...bounds});
     }
-    pushHistory('Free Transform');
     transformSourceRef.current = source;
     setTransform({
       x: box.x,
@@ -77,8 +82,9 @@ export function usePhotoTransformTool({
     });
     setTool('transform');
     setSelection(null);
+    selectionMaskRef.current = null;
     setStatus('Free Transform · Enter apply · Esc cancel');
-  }, [hasDoc, activeLayer, selection, width, height, pushHistory]);
+  }, [hasDoc, activeLayer, selection, width, height, pushHistory, transform, selectionMaskRef]);
 
   const applyTransform = useCallback(() => {
     if (!transform || !transformSourceRef.current) return;
@@ -100,6 +106,7 @@ export function usePhotoTransformTool({
     transformSourceRef.current = null;
     setTool('move');
     pushHistory('Transform');
+    originalCanvasRef.current = null;
     setStatus('Transform applied');
   }, [transform, pushHistory]);
 
@@ -108,14 +115,13 @@ export function usePhotoTransformTool({
       setTransform(null);
       return;
     }
-    // Undo the cut by restoring from last history? We already pushed history before cut.
-    // Re-apply previous history snapshot content for this layer is complex; simplest: undo once
     setTransform(null);
     transformSourceRef.current = null;
-    if (historyIndexRef.current > 0) applyHistory(historyIndexRef.current - 1);
+    if (originalCanvasRef.current) buffersRef.current.set(transform.layerId, originalCanvasRef.current);
+    originalCanvasRef.current = null;
     setTool('move');
     setStatus('Transform cancelled');
-  }, [transform, applyHistory]);
+  }, [transform, buffersRef]);
 
   return {beginTransform, applyTransform, cancelTransform};
 }

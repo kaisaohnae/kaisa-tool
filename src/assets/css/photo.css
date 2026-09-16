@@ -299,7 +299,7 @@ body.photo-mode {
 
 .photo-body {
   display: grid;
-  grid-template-columns: 42px 1fr 280px;
+  grid-template-columns: 92px minmax(0, 1fr) 280px;
   min-height: 0;
   overflow: hidden;
 }
@@ -309,16 +309,16 @@ body.photo-mode {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  padding: 4px 3px;
+  padding: 10px 6px;
   background: var(--photo-panel);
   border-right: 1px solid var(--photo-border);
   overflow: visible;
 }
 
 .photo-toolbar__tools {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .photo-toolbar__colors {
@@ -361,8 +361,9 @@ body.photo-mode {
 }
 
 .photo-tool {
-  width: 34px;
-  height: 26px;
+  position: relative;
+  width: 36px;
+  height: 36px;
   border: 1px solid transparent;
   border-radius: 2px;
   background: transparent;
@@ -968,3 +969,65 @@ body.photo-mode {
   gap: 8px;
   margin-top: 4px;
 }
+
+.photo-options { scrollbar-width: none; }
+.photo-options::-webkit-scrollbar { display: none; }
+.photo-alpha-controls { display: grid; gap: 4px; width: 100%; min-width: 0; }
+.photo-alpha-controls input { display: block; box-sizing: border-box; width: 100%; min-width: 0; padding: 2px 0; font-size: 10px; }
+.photo-viewport[data-brush-cursor] { cursor: none; }
+.photo-brush-cursor { position: absolute; z-index: 20; pointer-events: none; border: 1px solid white; box-shadow: 0 0 0 1px black; border-radius: 50%; transform: translate(-50%, -50%); box-sizing: border-box; }
+/* Compact two-column tool dock with a consistent optical icon size. */
+.photo-toolbar { box-shadow: 1px 0 0 rgba(255, 255, 255, .025); }
+.photo-tool { border-radius: 7px; color: #b9c3d0; transition: background 120ms ease, color 120ms ease, border-color 120ms ease; }
+.photo-tool:hover { background: #343e4b; color: #f3f7fc; border-color: #4b5869; }
+.photo-tool.is-active { background: #263f59; border-color: #5b9ad1; color: #d4eaff; box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 2px 5px rgba(0,0,0,.2); }
+.photo-tool:focus-visible, .photo-tool-flyout button:focus-visible { outline: 2px solid #88c6ff; outline-offset: 2px; }
+.photo-tool--flyout::after { right: 4px; bottom: 4px; opacity: .65; }
+.photo-tool-flyout { left: calc(100% + 9px); top: 0; border-radius: 9px; border-color: #4b5869; padding: 5px; background: #252d38; }
+.photo-tool-flyout button { min-height: 38px; border-radius: 5px; }
+.photo-toolbar__colors { margin-top: 12px; padding: 14px 5px 6px; gap: 8px; }
+.photo-swatches { width: 46px; height: 44px; }
+.photo-swatch { width: 29px; height: 29px; border-radius: 5px; border-color: #121923; box-shadow: 0 2px 4px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.25); }
+.photo-swatch--bg { left: 16px; top: 16px; }
+.photo-swatch-swap { right: -4px; top: -8px; font-size: 16px; }
+.photo-alpha-controls { gap: 5px; }
+.photo-alpha-controls input { height: 25px; border-radius: 4px; padding: 3px 5px; font-size: 11px; }
+.photo-colors-reset { width: 30px; height: 24px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .photo-tool { transition: none; } }
+.photo-layer__vis { display: grid; place-items: center; border-radius: 4px; }
+.photo-layer__vis:hover { background: #343e4b; color: #d4eaff; }
+.photo-layer__vis.is-off { opacity: .55; }
+
+.photo-ruler-hit { position: absolute; z-index: 21; }
+.photo-ruler-hit--horizontal { top: 0; left: 20px; right: 0; height: 20px; cursor: ns-resize; }
+.photo-ruler-hit--vertical { top: 20px; left: 0; bottom: 0; width: 20px; cursor: ew-resize; }
+.photo-guide-draft { position: absolute; z-index: 22; pointer-events: none; background: #00d8ff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
+.photo-guide-draft--vertical { top: 20px; bottom: 0; width: 1px; }
+.photo-guide-draft--horizontal { left: 20px; right: 0; height: 1px; }
+.photo-panel__actions { display: flex; align-items: center; gap: 4px; }
+.photo-panel__actions button { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; border: 1px solid #414d5d; border-radius: 6px; background: #272f3a; color: #bdc9d8; transition: background 120ms ease, color 120ms ease; }
+.photo-panel__actions button:hover:not(:disabled) { background: #364657; border-color: #6485a8; color: #e1efff; }
+.photo-panel__actions button[aria-pressed='true'] { background: #263f59; border-color: #5b9ad1; color: #d4eaff; }
+.photo-panel__actions button:disabled { opacity: .3; cursor: default; }
+.photo-panel__actions button:focus-visible { outline: 2px solid #88c6ff; outline-offset: 2px; }
+.photo-panel__actions .photo-layer-action--delete:hover:not(:disabled) { background: #4a3038; border-color: #98606d; color: #ffc2ce; }
+.photo-layer__lock { display: inline-flex; align-items: center; color: #95a7bc; }
+@media (prefers-reduced-motion: reduce) { .photo-panel__actions button { transition: none; } }
+.photo-options .photo-brush-picker { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 0; border: 1px solid #4b5869; border-radius: 6px; background: #252d38; flex-shrink: 0; }
+.photo-brush-picker svg { width: 40px; height: 26px; color: #d4eaff; }
+.photo-brush-presets { position: fixed; inset: auto; margin: 0; width: 284px; padding: 12px; border: 1px solid #4b5869; border-radius: 10px; background: #252d38; color: #d8e3ef; box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+.photo-brush-presets__title { display: flex; justify-content: space-between; margin-bottom: 12px; font: 600 12px system-ui; }
+.photo-brush-presets__title span { color: #8293a8; font-weight: 400; }
+.photo-brush-presets__grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.photo-brush-presets__grid button { display: grid; justify-items: center; gap: 6px; padding: 10px 3px; border: 1px solid #414d5d; border-radius: 7px; background: #202731; color: #bac9dc; font: 10px system-ui; cursor: pointer; }
+.photo-brush-presets__grid button:hover, .photo-brush-presets__grid button[aria-pressed='true'] { border-color: #5b9ad1; background: #263f59; color: #d4eaff; }
+.photo-brush-presets__grid button:focus-visible, .photo-brush-picker:focus-visible { outline: 2px solid #88c6ff; outline-offset: 2px; }
+.photo-selection-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 16; }
+
+.photo-layer__name { flex: 1; min-width: 0; }
+.photo-layer__opacity, .photo-layer__lock { flex-shrink: 0; }
+.photo-layer__effects { display: inline-grid; place-items: center; flex: 0 0 22px; width: 22px; height: 20px; border: 1px solid #526987; border-radius: 5px; background: #273a50; color: #b8d9ff; font: italic 600 13px Georgia, serif; line-height: 1; cursor: help; }
+.photo-layer.is-active .photo-layer__effects { border-color: #7eb3e4; background: #284a70; color: #e0efff; }
+.photo-context { box-sizing: border-box; min-width: min(180px, calc(100vw - 16px)); overflow: auto; overscroll-behavior: contain; border-radius: 7px; }
+.photo-context__item { overflow-wrap: anywhere; }
+.photo-layer__thumb-target { display: flex; flex-shrink: 0; }

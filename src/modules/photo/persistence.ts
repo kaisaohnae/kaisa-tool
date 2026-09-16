@@ -1,5 +1,5 @@
 import {createLayerCanvas} from './canvas';
-import {cloneLayerStyle} from './layers';
+import {cloneLayerStyle, nextLayerId} from './layers';
 import type {AdjustmentParams, AdjustmentType, BlendMode, LayerStyle, PhotoLayer, TextLayerData} from './types';
 import type {PhotoGuide} from './guides';
 
@@ -160,11 +160,15 @@ export async function deserializeDocument(doc: PersistedDocument): Promise<Resto
   const buffers = new Map<string, HTMLCanvasElement>();
   const masks = new Map<string, HTMLCanvasElement>();
   const layers: PhotoLayer[] = [];
+  const seenIds = new Set<string>();
   for (const l of doc.layers) {
-    if (l.canvasBlob) buffers.set(l.id, await blobToCanvas(l.canvasBlob));
-    if (l.maskBlob) masks.set(l.id, await blobToCanvas(l.maskBlob));
+    // Repair previously saved duplicate IDs without dropping either layer.
+    const id = seenIds.has(l.id) ? nextLayerId() : l.id;
+    seenIds.add(id);
+    if (l.canvasBlob) buffers.set(id, await blobToCanvas(l.canvasBlob));
+    if (l.maskBlob) masks.set(id, await blobToCanvas(l.maskBlob));
     layers.push({
-      id: l.id,
+      id,
       name: l.name,
       visible: l.visible,
       opacity: l.opacity,

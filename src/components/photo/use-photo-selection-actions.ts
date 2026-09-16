@@ -107,6 +107,21 @@ export function usePhotoSelectionActions({
     clearSelectionContent();
   }, [copySelection, clearSelectionContent]);
 
+  const selectionToLayer = useCallback((cut = false) => {
+    if (!hasDoc || !selection || selection.w <= 0 || selection.h <= 0 || activeLayer?.kind !== 'raster' || editTarget === 'mask' || (cut && activeLayer.locked)) return;
+    const source = buffersRef.current.get(activeLayerId);
+    if (!source) return;
+    const pixels = copySelectionArea(source, selection, selectionMaskRef.current);
+    pushHistory(cut ? 'Layer via Cut' : 'Layer via Copy');
+    const layer = createRasterLayer(cut ? 'Selection Cut' : 'Selection Copy');
+    const canvas = createLayerCanvas(width, height);
+    canvas.getContext('2d')?.drawImage(pixels, selection.x, selection.y);
+    if (cut) clearSelectionArea(source, selection, selectionMaskRef.current);
+    buffersRef.current.set(layer.id, canvas);
+    setLayers(prev => {const index = prev.findIndex(item => item.id === activeLayerId); return [...prev.slice(0,index+1),layer,...prev.slice(index+1)];});
+    setActiveLayerId(layer.id);
+    setStatus(cut ? 'Selection cut to a new layer' : 'Selection copied to a new layer');
+  }, [hasDoc, selection, activeLayer, editTarget, activeLayerId, buffersRef, selectionMaskRef, pushHistory, width, height, setLayers, setActiveLayerId, setStatus]);
   const pasteClipboard = useCallback(() => {
     const clip = clipboardRef.current;
     if (!clip || !hasDoc) return;
@@ -135,5 +150,5 @@ export function usePhotoSelectionActions({
     paint();
   }, [getPaintTarget, pushHistory, selection, fg, fgAlpha, paint, editTarget]);
 
-  return {selectAll, deselect, invertSelection, clearSelectionContent, copySelection, cutSelection, pasteClipboard, fillSelection};
+  return {selectAll, deselect, invertSelection, clearSelectionContent, copySelection, cutSelection, pasteClipboard, fillSelection, selectionToLayer};
 }

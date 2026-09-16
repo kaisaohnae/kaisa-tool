@@ -72,3 +72,16 @@ export function snapBox(
   }
   return {...box, x: box.x + dx, y: box.y + dy};
 }
+
+export function rulerGuideOrientation(x: number, y: number, rulerSize = 20): GuideOrientation | null {
+  if (x >= rulerSize && y >= 0 && y < rulerSize) return 'horizontal';
+  if (y >= rulerSize && x >= 0 && x < rulerSize) return 'vertical';
+  return null;
+}
+
+export function hitGuide(point: {x: number; y: number}, guides: PhotoGuide[], zoom: number) {
+  const tolerance = 5 / Math.max(.01, zoom);
+  return [...guides].reverse().find(guide =>
+    Math.abs((guide.orientation === 'vertical' ? point.x : point.y) - guide.position) <= tolerance
+  ) ?? null;
+}

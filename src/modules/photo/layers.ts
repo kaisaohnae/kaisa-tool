@@ -14,7 +14,7 @@ let layerSequence = 1;
 let documentSequence = 1;
 
 export function nextLayerId() {
-  return `layer-${++layerSequence}`;
+  return `layer-${crypto.randomUUID()}`;
 }
 
 export function syncLayerSequence(layers: PhotoLayer[]) {
@@ -29,10 +29,8 @@ export function nextDocName() {
   return `Untitled-${documentSequence++}`;
 }
 
-let docIdSequence = 1;
-
 export function nextDocId() {
-  return `doc-${++docIdSequence}`;
+  return `doc-${crypto.randomUUID()}`;
 }
 
 export function cloneLayerStyle(style: LayerStyle = DEFAULT_LAYER_STYLE): LayerStyle {

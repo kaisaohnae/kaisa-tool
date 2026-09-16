@@ -22,7 +22,7 @@ type Props = {
 };
 
 // Tools kept fully functional (keyboard shortcut + menu entries) but hidden from the toolbar for now.
-const HIDDEN_TOOL_IDS = new Set<PhotoTool>(['blurTool', 'burn', 'wand', 'clone', 'transform']);
+const HIDDEN_TOOL_IDS = new Set<PhotoTool>(['burn', 'wand', 'clone', 'transform']);
 
 type FlyoutKind = 'shape' | 'marquee';
 type MarqueeMode = 'select' | 'ellipse';
@@ -43,6 +43,7 @@ export function PhotoToolbar({
   shapeMode,
   onShapeModeChange
 }: Props) {
+  const [frontSwatch, setFrontSwatch] = useState<'fg' | 'bg'>('fg');
   const [openFlyout, setOpenFlyout] = useState<FlyoutKind | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -60,7 +61,10 @@ export function PhotoToolbar({
 
   useEffect(() => {
     if (!openFlyout) return;
-    const close = () => setOpenFlyout(null);
+    const close = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.photo-tool-group')) return;
+      setOpenFlyout(null);
+    };
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, [openFlyout]);
@@ -80,7 +84,7 @@ export function PhotoToolbar({
   const visibleTools = TOOL_DEFS.filter(tool => !HIDDEN_TOOL_IDS.has(tool.id) && tool.id !== 'ellipse');
 
   return (
-    <aside className="photo-toolbar" onClick={event => event.stopPropagation()}>
+    <aside aria-label="Editing tools" className="photo-toolbar" onClick={event => event.stopPropagation()}>
       <div className="photo-toolbar__tools">
         {visibleTools.map(tool =>
           tool.id === 'shape' ? (
@@ -88,24 +92,24 @@ export function PhotoToolbar({
               <button
                 type="button"
                 className={`photo-tool photo-tool--flyout${activeTool === tool.id ? ' is-active' : ''}`}
-                title={`${tool.tip} · Hold to choose shape`}
-                onClick={() => onSelect(tool.id)}
-                onPointerDown={() => {
-                  stopHold();
-                  holdTimer.current = setTimeout(() => setOpenFlyout('shape'), 450);
+                aria-label="Shape tools"
+                aria-pressed={activeTool === tool.id}
+                title={`${tool.tip} · Click to choose shape`}
+                aria-haspopup="menu"
+                aria-expanded={openFlyout === 'shape'}
+                onClick={() => {
+                  onSelect('shape');
+                  setOpenFlyout(current => current === 'shape' ? null : 'shape');
                 }}
-                onPointerUp={stopHold}
-                onPointerCancel={stopHold}
-                onPointerLeave={stopHold}
                 onContextMenu={event => {
                   event.preventDefault();
                   setOpenFlyout('shape');
                 }}
               >
-                <PhotoShapeIcon mode={shapeMode} size={18} />
+                <PhotoShapeIcon mode={shapeMode} size={22} />
               </button>
               {openFlyout === 'shape' ? (
-                <div className="photo-tool-flyout" onPointerDown={event => event.stopPropagation()}>
+                <div role="menu" className="photo-tool-flyout" onPointerDown={event => event.stopPropagation()}>
                   {([
                     ['rect', 'Rectangle'],
                     ['ellipse', 'Ellipse'],
@@ -114,11 +118,13 @@ export function PhotoToolbar({
                     <button
                       key={mode}
                       type="button"
+                      role="menuitemradio"
+                      aria-checked={shapeMode === mode}
                       className={shapeMode === mode ? 'is-active' : ''}
                       onClick={() => chooseShape(mode)}
                       title={label}
                     >
-                      <PhotoShapeIcon mode={mode} size={18} />
+                      <PhotoShapeIcon mode={mode} size={22} />
                       <span>{label}</span>
                     </button>
                   ))}
@@ -131,6 +137,8 @@ export function PhotoToolbar({
                 type="button"
                 className={`photo-tool photo-tool--flyout${activeTool === 'select' || activeTool === 'ellipse' ? ' is-active' : ''}`}
                 title={`${marqueeMode === 'ellipse' ? 'Elliptical Marquee (Shift+M)' : 'Rectangular Marquee (M)'} · Hold to switch`}
+                aria-label="Selection tools"
+                aria-pressed={activeTool === 'select' || activeTool === 'ellipse'}
                 onClick={() => onSelect(marqueeMode)}
                 onPointerDown={() => {
                   stopHold();
@@ -144,7 +152,7 @@ export function PhotoToolbar({
                   setOpenFlyout('marquee');
                 }}
               >
-                <PhotoToolIcon tool={marqueeMode} size={18} />
+                <PhotoToolIcon tool={marqueeMode} size={22} />
               </button>
               {openFlyout === 'marquee' ? (
                 <div className="photo-tool-flyout" onPointerDown={event => event.stopPropagation()}>
@@ -159,7 +167,7 @@ export function PhotoToolbar({
                       onClick={() => chooseMarquee(mode)}
                       title={label}
                     >
-                      <PhotoToolIcon tool={mode} size={18} />
+                      <PhotoToolIcon tool={mode} size={22} />
                       <span>{label}</span>
                     </button>
                   ))}
@@ -171,10 +179,12 @@ export function PhotoToolbar({
               key={tool.id}
               type="button"
               className={`photo-tool${activeTool === tool.id ? ' is-active' : ''}`}
+              aria-label={tool.tip}
+              aria-pressed={activeTool === tool.id}
               title={tool.tip}
               onClick={() => onSelect(tool.id)}
             >
-              <PhotoToolIcon tool={tool.id} size={18} />
+              <PhotoToolIcon tool={tool.id} size={22} />
             </button>
           )
         )}
@@ -186,15 +196,15 @@ export function PhotoToolbar({
             type="button"
             className="photo-swatch photo-swatch--fg"
             title="Foreground color"
-            style={{background: foreground}}
-            onClick={() => document.getElementById('photo-fg')?.click()}
+            style={{background: foreground, zIndex: frontSwatch === 'fg' ? 3 : 1}}
+            onClick={() => { setFrontSwatch('fg'); document.getElementById('photo-fg')?.click(); }}
           />
           <button
             type="button"
             className="photo-swatch photo-swatch--bg"
             title="Background color"
-            style={{background}}
-            onClick={() => document.getElementById('photo-bg')?.click()}
+            style={{background, zIndex: frontSwatch === 'bg' ? 3 : 1}}
+            onClick={() => { setFrontSwatch('bg'); document.getElementById('photo-bg')?.click(); }}
           />
           <input
             id="photo-fg"

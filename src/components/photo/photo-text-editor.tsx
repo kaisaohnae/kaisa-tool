@@ -20,8 +20,10 @@ export function PhotoTextEditor({text, left, top, zoom, onChange, onCommit, onCa
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-    element.focus();
+    element.focus({preventScroll: true});
+    const frame = requestAnimationFrame(() => element.focus({preventScroll: true}));
     element.setSelectionRange(element.value.length, element.value.length);
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {

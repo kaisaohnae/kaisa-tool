@@ -32,3 +32,35 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     </div>
   );
 }
+
+export function FillModal({source, color, opacity, preserveTransparency, onSourceChange, onColorChange, onOpacityChange, onPreserveChange, onCancel, onFill}: {
+  source: string; color: string; opacity: number; preserveTransparency: boolean;
+  onSourceChange: (value: string) => void; onColorChange: (value: string) => void;
+  onOpacityChange: (value: number) => void; onPreserveChange: (value: boolean) => void;
+  onCancel: () => void; onFill: () => void;
+}) {
+  return (
+    <div className="photo-modal" onClick={onCancel}>
+      <form className="photo-modal__card" role="dialog" aria-modal="true" aria-labelledby="photo-fill-title"
+        onClick={event => event.stopPropagation()}
+        onSubmit={event => {event.preventDefault(); onFill();}}
+        onKeyDown={event => {if (event.key === 'Escape') {event.preventDefault(); onCancel();}}}>
+        <h2 id="photo-fill-title">Fill</h2>
+        <label>Contents
+          <select autoFocus value={source} onChange={event => onSourceChange(event.target.value)}>
+            <option value="foreground">Foreground Color</option>
+            <option value="background">Background Color</option>
+            <option value="color">Color…</option>
+            <option value="black">Black</option>
+            <option value="gray">50% Gray</option>
+            <option value="white">White</option>
+          </select>
+        </label>
+        {source === 'color' && <label>Color<input type="color" value={color} onChange={event => onColorChange(event.target.value)} /></label>}
+        <label>Opacity (%)<input type="number" min={0} max={100} value={opacity} onChange={event => onOpacityChange(Math.max(0, Math.min(100, Number(event.target.value) || 0)))} /></label>
+        <label><input type="checkbox" checked={preserveTransparency} onChange={event => onPreserveChange(event.target.checked)} />Preserve Transparency</label>
+        <div className="photo-modal__actions"><button type="button" onClick={onCancel}>Cancel</button><button type="submit" className="is-primary">OK</button></div>
+      </form>
+    </div>
+  );
+}

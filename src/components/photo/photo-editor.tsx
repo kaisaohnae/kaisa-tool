@@ -2,7 +2,14 @@
 
 import {useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react';
 import {PhotoMenubar, type PhotoMenuKey} from './photo-menubar';
+import {PhotoContextMenu} from './photo-context-menu';
+import {usePhotoSelectionOverlay} from './use-photo-selection-overlay';
+import {usePhotoClipboard} from './use-photo-clipboard';
+import {usePhotoPixelActions} from './use-photo-pixel-actions';
+import {usePhotoLayerSelection} from './use-photo-layer-selection';
+import {replaceMergedLayers} from '@/modules/photo/layer-selection';
 import {PhotoLayerStylePanel} from './photo-layer-style-panel';
+import {PhotoLayerStyleBadge} from './photo-layer-style-badge';
 import {LayerThumb} from './photo-layer-thumb';
 import {usePhotoViewport} from './use-photo-viewport';
 import {usePhotoHistory} from './use-photo-history';
@@ -14,11 +21,13 @@ import {usePhotoLayerFilters} from './use-photo-layer-filters';
 import {usePhotoLayerActions} from './use-photo-layer-actions';
 import {usePhotoDocumentSessions} from './use-photo-document-sessions';
 import {usePhotoWorkspaceAutosave} from './use-photo-workspace-autosave';
-import {NewDocumentModal} from './photo-modals';
+import {NewDocumentModal, FillModal} from './photo-modals';
 import {PhotoOptionsBar} from './photo-options-bar';
 import {PhotoSidebar} from './photo-sidebar';
 import {PhotoTextEditor} from './photo-text-editor';
 import {PhotoToolbar} from './photo-toolbar';
+import {PhotoBrushPresets} from './photo-brush-presets';
+import {IconEye, IconLayerAction} from './photo-tool-icons';
 import {
   boxBlurCanvas,
   compositeLayers,
@@ -61,6 +70,8 @@ import {
   rectFromDrag,
   moveLayerBeside,
   saneGridSpacing,
+  rulerGuideOrientation,
+  hitGuide,
   snapBox,
   selectionToMask,
   saveNewDocumentSettings,
@@ -75,6 +86,8 @@ import {
   type RetouchMode,
   type TextLayerData,
   type ShapeMode,
+  type BrushTip,
+  type BrushStrokeState,
   type ShapeStyle,
   type TransformState
 } from '@/modules/photo';
@@ -114,6 +127,7 @@ type DocTab = {id: string; name: string; dirty: boolean};
 
 export default function PhotoEditor() {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const buffersRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -134,6 +148,8 @@ export default function PhotoEditor() {
     anchorIndex?: number;
   } | null>(null);
   const spacePanRef = useRef(false);
+  const [spacePan, setSpacePan] = useState(false);
+  const [brushCursor, setBrushCursor] = useState<{x: number; y: number} | null>(null);
   const clipboardRef = useRef<HTMLCanvasElement | null>(null);
   const layerStyleClipboardRef = useRef<LayerStyle | null>(null);
   const transformSourceRef = useRef<HTMLCanvasElement | null>(null);
@@ -162,10 +178,15 @@ export default function PhotoEditor() {
   const [brushSize, setBrushSize] = useState(12);
   const [brushHardness, setBrushHardness] = useState(100);
   const [brushOpacity, setBrushOpacity] = useState(100);
+  const [brushTip, setBrushTip] = useState<BrushTip>('round');
+  const [brushAngle, setBrushAngle] = useState(0);
+  const [brushSpacing, setBrushSpacing] = useState(12.5);
+  const brushStrokeRef = useRef<BrushStrokeState>({distanceToNext: 0});
   const [retouchStrength, setRetouchStrength] = useState(35);
   const [shapeMode, setShapeMode] = useState<ShapeMode>('rect');
   const [shapeStyle, setShapeStyle] = useState<ShapeStyle>('fill');
   const [shapeStrokeWidth, setShapeStrokeWidth] = useState(2);
+  const [shapeCornerRadius, setShapeCornerRadius] = useState(24);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({x: 0, y: 0});
   const [selection, setSelection] = useState<PhotoSelection | null>(null);
@@ -185,6 +206,11 @@ export default function PhotoEditor() {
   const [dirty, setDirty] = useState(false);
   const [hasDoc, setHasDoc] = useState(false);
   const [newDialog, setNewDialog] = useState(false);
+  const [fillDialog, setFillDialog] = useState(false);
+  const [fillSource, setFillSource] = useState('foreground');
+  const [fillColor, setFillColor] = useState('#000000');
+  const [fillOpacity, setFillOpacity] = useState(100);
+  const [fillPreserve, setFillPreserve] = useState(false);
   const [newW, setNewW] = useState(1200);
   const [newH, setNewH] = useState(800);
   const [newFill, setNewFill] = useState<'white' | 'transparent' | 'bg'>('white');
@@ -210,11 +236,14 @@ export default function PhotoEditor() {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(50);
   const [guides, setGuides] = useState<PhotoGuide[]>([]);
+  const guideDragRef = useRef<PhotoGuide | null>(null);
+  const [guideDraft, setGuideDraft] = useState<PhotoGuide | null>(null);
   const [status, setStatus] = useState('Ready');
   const [historyTick, setHistoryTick] = useState(0);
   const [sidebarTab, setSidebarTab] = useState<'layers' | 'history'>('layers');
 
   const activeLayer = layers.find(l => l.id === activeLayerId) ?? null;
+  const {selectedIds, selectLayer, resetSelection} = usePhotoLayerSelection({layers, activeLayerId, documentId: activeDocIdRef.current, setActiveLayerId});
   const liveSel = draftSel ?? selection;
   const {historyRef, historyIndexRef, pushHistory, applyHistory, undo, redo} = usePhotoHistory({
     width,
@@ -355,7 +384,7 @@ export default function PhotoEditor() {
       ctx.beginPath(); ctx.rect(dx, dy, width * zoom, height * zoom); ctx.clip();
       ctx.strokeStyle = '#00d8ff'; ctx.lineWidth = 1;
       ctx.beginPath();
-      for (const guide of guides) {
+      for (const guide of guides.filter(item => item.id !== guideDraft?.id)) {
         if (guide.orientation === 'vertical') {
           const x = Math.round(dx + guide.position * zoom) + 0.5;
           ctx.moveTo(x, dy); ctx.lineTo(x, dy + height * zoom);
@@ -415,23 +444,20 @@ export default function PhotoEditor() {
     const sel = cropDraft ?? liveSel;
     if (!transform && sel && (sel.w > 0 || sel.shape === 'lasso')) {
       const hasArea = sel.shape === 'lasso' ? (sel.points?.length ?? 0) > 2 : sel.w > 0 && sel.h > 0;
-      if (hasArea) {
+      if (hasArea && cropDraft) {
         ctx.fillStyle = 'rgba(0,0,0,0.35)';
         ctx.fillRect(dx, dy, width * zoom, height * zoom);
         ctx.save();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.translate(dx, dy);
         ctx.scale(zoom, zoom);
-        pathFromSelection(ctx, sel);
-        ctx.fill();
+        pathFromSelection(ctx, sel); ctx.fill();
         ctx.restore();
         ctx.globalCompositeOperation = 'source-over';
         ctx.save();
         ctx.translate(dx, dy);
         ctx.scale(zoom, zoom);
-        pathFromSelection(ctx, sel);
-        ctx.clip();
-        ctx.drawImage(composed, 0, 0);
+        pathFromSelection(ctx, sel); ctx.clip(); ctx.drawImage(composed, 0, 0);
         ctx.restore();
         ctx.strokeStyle = '#ffffff';
         ctx.setLineDash([4, 3]);
@@ -439,8 +465,7 @@ export default function PhotoEditor() {
         ctx.save();
         ctx.translate(dx, dy);
         ctx.scale(zoom, zoom);
-        pathFromSelection(ctx, sel);
-        ctx.stroke();
+        pathFromSelection(ctx, sel); ctx.stroke();
         ctx.restore();
         ctx.setLineDash([]);
         if (cropDraft) {
@@ -537,7 +562,7 @@ export default function PhotoEditor() {
       ctx.stroke();
       ctx.fillStyle = '#25282c'; ctx.fillRect(0, 0, ruler, ruler);
     }
-  }, [hasDoc, width, height, layerInputs, pan, zoom, liveSel, cropDraft, transform, getViewOrigin, showGrid, showRulers, gridSize, guides, penPath, penHover]);
+  }, [hasDoc, width, height, layerInputs, pan, zoom, liveSel, cropDraft, transform, getViewOrigin, showGrid, showRulers, gridSize, guides, guideDraft, draftSel, penPath, penHover]);
 
   useEffect(() => {
     paint();
@@ -561,6 +586,7 @@ export default function PhotoEditor() {
     return () => window.removeEventListener('resize', onResize);
   }, [paint]);
 
+  usePhotoSelectionOverlay({selectionCanvasRef, viewportRef, selectionMaskRef, hasDoc, liveSel, draftSel, cropDraft, transform, zoom, pan, getViewOrigin});
   const getPaintTarget = useCallback(() => {
     if (!activeLayerId || !activeLayer) return null;
     if (activeLayer.kind !== 'raster') return null;
@@ -683,7 +709,6 @@ export default function PhotoEditor() {
 
   const {
     addLayer,
-    addAdjustmentLayer,
     addHueSaturationLayer,
     addLevelsLayer,
     duplicateLayer,
@@ -729,16 +754,35 @@ export default function PhotoEditor() {
     height,
     transform,
     transformSourceRef,
+    selectionMaskRef,
     buffersRef,
-    historyIndexRef,
     pushHistory,
-    applyHistory,
     setTransform,
     setTool,
     setSelection,
     setStatus
   });
 
+  const mergeSelectedLayers = useCallback(() => {
+    if (!hasDoc || transform) return;
+    if (selectedIds.length <= 1) {mergeDown(); return;}
+    const selected = layers.filter(layer => selectedIds.includes(layer.id));
+    if (selected.some(layer => layer.locked || layer.kind === 'adjustment')) {
+      setStatus('Unlock selected layers and exclude adjustment layers before merging');
+      return;
+    }
+    if (textEditing) commitTextEditing();
+    pushHistory('Merge Selected Layers');
+    const canvas = compositeLayers(width, height, toCompositeInputs(selected, buffersRef.current, masksRef.current, width, height));
+    const merged = createRasterLayer(selected[selected.length - 1].name);
+    for (const layer of selected) {buffersRef.current.delete(layer.id); masksRef.current.delete(layer.id);}
+    buffersRef.current.set(merged.id, canvas);
+    setLayers(prev => replaceMergedLayers(prev, selectedIds, merged));
+    resetSelection(merged.id);
+    setEditTarget('layer');
+    setSelection(null); selectionMaskRef.current = null;
+    setStatus(`Merged ${selected.length} layers`);
+  }, [hasDoc, transform, selectedIds, layers, textEditing, commitTextEditing, pushHistory, width, height, mergeDown, resetSelection]);
   const hitTransformHandle = (pt: {x: number; y: number}, box: {x: number; y: number; w: number; h: number}): TransformHandle | null => {
     const tol = 8 / zoom;
     const points: {h: TransformHandle; x: number; y: number}[] = [
@@ -818,7 +862,7 @@ export default function PhotoEditor() {
     copySelection,
     cutSelection,
     pasteClipboard,
-    fillSelection
+    selectionToLayer
   } = usePhotoSelectionActions({
     hasDoc,
     width,
@@ -844,6 +888,7 @@ export default function PhotoEditor() {
     setStatus
   });
 
+  const {fillActiveLayer, selectLayerPixels} = usePhotoPixelActions({hasDoc, transform, textEditing, activeLayer, width, height, selection, selectionMaskRef, buffersRef, getPaintTarget, pushHistory, paint, cancelTransform, commitTextEditing, setStatus, setSelection, setDraftSel, setCropDraft, setTool});
   const {getActiveRasterCanvas, applyFilterToActiveLayer, flipActiveLayer, applyRotate90, applyCrop} = usePhotoLayerFilters({
     activeLayer,
     activeLayerId,
@@ -863,6 +908,17 @@ export default function PhotoEditor() {
     setStatus
   });
 
+  usePhotoClipboard({hasDoc, width, height, activeDocIdRef, buffersRef, clipboardRef, selectionMaskRef, createDocument, pushHistory, pasteClipboard, setLayers, setActiveLayerId, setSelection, setEditTarget, setTool, setStatus});
+
+  useEffect(() => {
+    if (!hasDoc) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasDoc]);
   const closeMenu = () => setMenuOpen(null);
   const closeContext = () => setContextMenu(null);
 
@@ -873,9 +929,31 @@ export default function PhotoEditor() {
     const pt = getDocPoint(e.clientX, e.clientY);
     const snappedPt = snapDocPoint(pt);
     setCursor({x: Math.round(pt.x), y: Math.round(pt.y)});
+    if (e.button === 0 && !spacePanRef.current) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const orientation = showRulers ? rulerGuideOrientation(e.clientX - rect.left, e.clientY - rect.top) : null;
+      const existing = tool === 'move' && !transform ? hitGuide(pt, guides, zoom) : null;
+      if (orientation || existing) {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const guide = existing && !orientation ? {...existing} : {
+          id: `guide-${crypto.randomUUID()}`,
+          orientation: orientation!,
+          position: Math.round(orientation === 'vertical' ? pt.x : pt.y)
+        };
+        guideDragRef.current = guide;
+        setGuideDraft(guide);
+        return;
+      }
+    }
     const currentTool = spacePanRef.current ? 'hand' : tool;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (currentTool !== 'text') (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    else e.preventDefault();
 
+    if (currentTool === 'hand') {
+      drawingRef.current = {lastX: e.clientX, lastY: e.clientY, mode: 'pan', startX: pt.x, startY: pt.y};
+      return;
+    }
     if (transform) {
       const handle = hitTransformHandle(pt, transform);
       if (!handle) return;
@@ -891,10 +969,6 @@ export default function PhotoEditor() {
       return;
     }
 
-    if (currentTool === 'hand') {
-      drawingRef.current = {lastX: e.clientX, lastY: e.clientY, mode: 'pan', startX: pt.x, startY: pt.y};
-      return;
-    }
     if (currentTool === 'zoom') {
       setZoom(z => stepZoomLevel(z, e.altKey ? -1 : 1));
       return;
@@ -1094,6 +1168,7 @@ export default function PhotoEditor() {
     if (currentTool === 'brush' || currentTool === 'eraser') {
       const canvas = getPaintTarget();
       if (!canvas) return;
+      brushStrokeRef.current = {distanceToNext: 0};
       pushHistory(currentTool === 'eraser' ? 'Eraser' : editTarget === 'mask' ? 'Mask Paint' : 'Brush');
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -1119,7 +1194,8 @@ export default function PhotoEditor() {
         maskEraseAsBlack ? '#000000' : color,
         erase,
         brushHardness,
-        brushOpacity / 100 * paintAlpha
+        brushOpacity / 100 * paintAlpha,
+        {tip: brushTip, angle: brushAngle, spacing: brushSpacing, stroke: brushStrokeRef.current, selection, mask: selectionMaskRef.current}
       );
       paint();
       return;
@@ -1133,14 +1209,23 @@ export default function PhotoEditor() {
       if (!canvas) return;
       pushHistory(currentTool === 'blurTool' ? 'Blur Stroke' : currentTool === 'sharpenTool' ? 'Sharpen Stroke' : currentTool === 'dodge' ? 'Dodge Stroke' : 'Burn Stroke');
       drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: currentTool, startX: pt.x, startY: pt.y};
-      applyRetouchStamp(canvas, pt.x, pt.y, currentTool, {size: brushSize, hardness: brushHardness, strength: retouchStrength});
+      applyRetouchStamp(canvas, pt.x, pt.y, currentTool, {size: brushSize, hardness: brushHardness, strength: retouchStrength, mask: selectionMaskRef.current ?? (selection ? selectionToMask(selection, width, height) : null)});
       paint();
     }
   };
 
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!hasDoc) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setBrushCursor({x: e.clientX - rect.left, y: e.clientY - rect.top});
     const pt = getDocPoint(e.clientX, e.clientY);
+    if (guideDragRef.current) {
+      const guide = {...guideDragRef.current, position: Math.round(guideDragRef.current.orientation === 'vertical' ? pt.x : pt.y)};
+      guideDragRef.current = guide;
+      setGuideDraft(guide);
+      setStatus(`${guide.orientation === 'vertical' ? 'X' : 'Y'}: ${guide.position}px · release to place guide`);
+      return;
+    }
     const snappedPt = snapDocPoint(pt);
     setCursor({x: Math.round(pt.x), y: Math.round(pt.y)});
     if (tool === 'pen' && penPath) setPenHover(pt);
@@ -1190,7 +1275,7 @@ export default function PhotoEditor() {
     if (drag.mode === 'select' || drag.mode === 'ellipse' || drag.mode === 'crop' || drag.mode === 'shape') {
       const shape = drag.mode === 'ellipse' ? 'ellipse' : drag.mode === 'shape' ? shapeMode : 'rect';
       const selectionShape = shape === 'rounded' ? 'rect' : shape;
-      const rect = rectFromDrag(drag.startX, drag.startY, snappedPt.x, snappedPt.y, width, height, selectionShape);
+      const rect = rectFromDrag(drag.startX, drag.startY, snappedPt.x, snappedPt.y, width, height, selectionShape, {square: e.shiftKey, fromCenter: e.altKey});
       if (drag.mode === 'select' || drag.mode === 'ellipse') setDraftSel(rect);
       else if (drag.mode === 'shape') setDraftSel(rect);
       else setCropDraft(rect);
@@ -1261,7 +1346,7 @@ export default function PhotoEditor() {
       const canvas = activeLayer?.kind === 'raster' ? buffersRef.current.get(activeLayer.id) : null;
       if (!canvas || !activeLayer || activeLayer.locked || editTarget === 'mask') return;
       applyRetouchStroke(canvas, drag.lastX, drag.lastY, pt.x, pt.y, drag.mode as RetouchMode, {
-        size: brushSize, hardness: brushHardness, strength: retouchStrength
+        size: brushSize, hardness: brushHardness, strength: retouchStrength, mask: selectionMaskRef.current ?? (selection ? selectionToMask(selection, width, height) : null)
       });
       drag.lastX = pt.x; drag.lastY = pt.y; paint();
       return;
@@ -1274,7 +1359,7 @@ export default function PhotoEditor() {
       const maskEraseAsBlack = editTarget === 'mask' && drag.mode === 'erase';
       const erase = editTarget === 'mask' ? false : drag.mode === 'erase';
       const color = maskEraseAsBlack ? '#000000' : editTarget === 'mask' ? fg : fg;
-      drawBrushStroke(ctx, drag.lastX, drag.lastY, pt.x, pt.y, brushSize, color, erase, brushHardness, brushOpacity / 100 * (erase ? 1 : fgAlpha / 100));
+      drawBrushStroke(ctx, drag.lastX, drag.lastY, pt.x, pt.y, brushSize, color, erase, brushHardness, brushOpacity / 100 * (erase ? 1 : fgAlpha / 100), {tip: brushTip, angle: brushAngle, spacing: brushSpacing, stroke: brushStrokeRef.current, selection, mask: selectionMaskRef.current});
       drag.lastX = pt.x;
       drag.lastY = pt.y;
       paint();
@@ -1306,6 +1391,27 @@ export default function PhotoEditor() {
   };
 
   const onPointerUp = (e?: ReactPointerEvent) => {
+    const guide = guideDragRef.current;
+    if (guide) {
+      if (e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const point = getDocPoint(e.clientX, e.clientY);
+        const position = Math.round(guide.orientation === 'vertical' ? point.x : point.y);
+        const outside = x < (showRulers ? 20 : 0) || y < (showRulers ? 20 : 0) || x > rect.width || y > rect.height
+          || position < 0 || position > (guide.orientation === 'vertical' ? width : height);
+        setGuides(prev => outside ? prev.filter(item => item.id !== guide.id)
+          : prev.some(item => item.id === guide.id) ? prev.map(item => item.id === guide.id ? {...guide, position} : item)
+          : [...prev, {...guide, position}]);
+        setDirty(true);
+        setStatus(outside ? 'Guide removed' : `Guide placed at ${position}px`);
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      guideDragRef.current = null;
+      setGuideDraft(null);
+      return;
+    }
     const drag = drawingRef.current;
     if (drag?.mode === 'select' || drag?.mode === 'ellipse') {
       selectionMaskRef.current = null;
@@ -1317,7 +1423,7 @@ export default function PhotoEditor() {
       const canvas = getPaintTarget();
       if (canvas && draftSel && draftSel.w >= 1 && draftSel.h >= 1) {
         pushHistory('Shape');
-        drawShape(canvas, draftSel.x, draftSel.y, draftSel.w, draftSel.h, shapeMode, shapeStyle, fg, bg, shapeStrokeWidth, fgAlpha / 100, bgAlpha / 100);
+        drawShape(canvas, draftSel.x, draftSel.y, draftSel.w, draftSel.h, shapeMode, shapeStyle, fg, bg, shapeStrokeWidth, fgAlpha / 100, bgAlpha / 100, shapeCornerRadius);
         paint();
       }
       setDraftSel(null);
@@ -1361,36 +1467,56 @@ export default function PhotoEditor() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Alt') setAltPressed(true);
 
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
-
-      if (e.code === 'Space' && !e.repeat) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        spacePanRef.current = true;
+        if (!e.repeat) setNewDialog(true);
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        if (!e.repeat) {
+          if (textEditing) commitTextEditing();
+          beginTransform();
+        }
+        return;
+      }
+      if (e.key === 'Escape' && guideDragRef.current) {
+        e.preventDefault();
+        guideDragRef.current = null;
+        setGuideDraft(null);
+        return;
+      }
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        spacePanRef.current = true;
+        setSpacePan(true);
+        return;
+      }
+
+      if (fillDialog) return;
       const mod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
 
-      if (mod && key === 't') {
-        e.preventDefault();
-        beginTransform();
-        return;
-      }
       if (mod && e.shiftKey && key === 'n') {
         e.preventDefault();
         addLayer();
         return;
       }
-      if (mod && key === 'n') {
-        e.preventDefault();
-        setNewDialog(true);
-        return;
-      }
       if (mod && key === 'j') {
         e.preventDefault();
-        duplicateLayer();
+        if (!e.repeat && !transform) {
+          if (selection) selectionToLayer(e.shiftKey);
+          else if (!e.shiftKey) duplicateLayer();
+        }
+        return;
+      }
+      if (mod && key === 'e') {
+        e.preventDefault();
+        if (!e.repeat && !transform) mergeSelectedLayers();
         return;
       }
       if (mod && key === 'r') {
@@ -1450,8 +1576,7 @@ export default function PhotoEditor() {
         return;
       }
       if (mod && key === 'v') {
-        e.preventDefault();
-        pasteClipboard();
+        // Let the native paste event supply images from the system clipboard.
         return;
       }
       if (mod && (key === '=' || key === '+')) {
@@ -1466,13 +1591,13 @@ export default function PhotoEditor() {
       }
       if (mod && key === '0') {
         e.preventDefault();
-        setZoom(1);
-        setPan({x: 0, y: 0});
+        fitZoom();
         return;
       }
       if (mod && key === '1') {
         e.preventDefault();
-        fitZoom();
+        setZoom(1);
+        setPan({x: 0, y: 0});
         return;
       }
 
@@ -1519,6 +1644,11 @@ export default function PhotoEditor() {
         deleteLayer();
         return;
       }
+      if (e.key === 'F5' && e.shiftKey) {
+        e.preventDefault();
+        if (!e.repeat && hasDoc && !transform) setFillDialog(true);
+        return;
+      }
       if (e.key === 'F5') {
         e.preventDefault();
         applyCrop(selection ?? undefined);
@@ -1539,6 +1669,14 @@ export default function PhotoEditor() {
           e.preventDefault();
           deselect();
         }
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && hasDoc && (mod || e.altKey || e.shiftKey)) {
+        e.preventDefault();
+        if (e.repeat || transform) return;
+        if (mod) fillActiveLayer(bg, 100, e.shiftKey);
+        else if (e.altKey) fillActiveLayer(fg, 100, e.shiftKey);
+        else setFillDialog(true);
         return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && hasDoc) {
@@ -1588,16 +1726,26 @@ export default function PhotoEditor() {
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') spacePanRef.current = false;
+      if (e.code === 'Space') {
+        spacePanRef.current = false;
+        setSpacePan(false);
+      }
       if (e.key === 'Alt') setAltPressed(false);
     };
-    const onBlur = () => setAltPressed(false);
+    const onBlur = () => {
+      setAltPressed(false);
+      spacePanRef.current = false;
+      setSpacePan(false);
+      drawingRef.current = null;
+      guideDragRef.current = null;
+      setGuideDraft(null);
+    };
 
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
@@ -1611,6 +1759,7 @@ export default function PhotoEditor() {
     copySelection,
     cutSelection,
     pasteClipboard,
+    selectionToLayer,
     fitZoom,
     cropDraft,
     selection,
@@ -1620,6 +1769,8 @@ export default function PhotoEditor() {
     applyCrop,
     hasDoc,
     clearSelectionContent,
+    fillActiveLayer,
+    fillDialog,
     fg,
     bg,
     beginTransform,
@@ -1637,6 +1788,8 @@ export default function PhotoEditor() {
     cancelTextEditing,
     addLayer,
     duplicateLayer,
+    mergeDown,
+    mergeSelectedLayers,
     tool,
     nudgeActiveLayer,
     penPath,
@@ -1701,12 +1854,14 @@ export default function PhotoEditor() {
     edit: [
       {label: 'Undo', shortcut: 'Ctrl+Z', action: undo, disabled: historyIndex <= 0},
       {label: 'Redo', shortcut: 'Ctrl+Shift+Z', action: redo, disabled: historyIndex >= historyEntries.length - 1},
-      {label: 'Free Transform', shortcut: 'Ctrl+T', action: beginTransform, disabled: !hasDoc || activeLayer?.kind !== 'raster'},
+      {label: 'Free Transform', shortcut: 'Ctrl+T', action: beginTransform, disabled: !hasDoc || activeLayer?.kind !== 'raster' || activeLayer.locked || !!transform},
       {label: 'Cut', shortcut: 'Ctrl+X', action: cutSelection, disabled: !hasDoc},
       {label: 'Copy', shortcut: 'Ctrl+C', action: copySelection, disabled: !hasDoc},
       {label: 'Paste', shortcut: 'Ctrl+V', action: pasteClipboard, disabled: !clipboardRef.current},
       {label: 'Clear', shortcut: 'Del', action: clearSelectionContent, disabled: !hasDoc},
-      {label: 'Fill', action: fillSelection, disabled: !hasDoc},
+      {label: 'Fill…', shortcut: 'Shift+Del', action: () => setFillDialog(true), disabled: !hasDoc || !!transform || activeLayer?.kind !== 'raster' || activeLayer.locked},
+      {label: 'Fill with Foreground Color', shortcut: 'Alt+Del', action: () => fillActiveLayer(fg), disabled: !hasDoc || !!transform || activeLayer?.kind !== 'raster' || activeLayer.locked},
+      {label: 'Fill with Background Color', shortcut: 'Ctrl+Del', action: () => fillActiveLayer(bg), disabled: !hasDoc || !!transform || activeLayer?.kind !== 'raster' || activeLayer.locked},
       {
         label: 'Stroke Selection…',
         action: () => {
@@ -1877,20 +2032,21 @@ export default function PhotoEditor() {
       }
     ],
     layer: [
+      {label: 'Free Transform', shortcut: 'Ctrl+T', action: beginTransform, disabled: !hasDoc || activeLayer?.kind !== 'raster' || activeLayer.locked || !!transform},
       {label: 'New Layer', shortcut: 'F3', action: () => addLayer(), disabled: !hasDoc},
       {label: 'Copy Layer Style', shortcut: 'Shift+F2', action: () => copyLayerStyle(), disabled: !activeLayer || activeLayer.kind === 'adjustment'},
       {label: 'Paste Layer Style', shortcut: 'F2', action: () => pasteLayerStyle(), disabled: !activeLayer || activeLayer.kind === 'adjustment' || !layerStyleClipboardRef.current},
-      {label: 'New Adjustment Layer', action: addAdjustmentLayer, disabled: !hasDoc},
       {label: 'New Hue/Saturation Layer', action: addHueSaturationLayer, disabled: !hasDoc},
       {label: 'New Levels Layer', action: addLevelsLayer, disabled: !hasDoc},
-      {label: 'Duplicate Layer', shortcut: 'Ctrl+J', action: () => duplicateLayer(), disabled: !hasDoc},
+      {label: 'Layer via Copy', shortcut: 'Ctrl+J', action: () => selection ? selectionToLayer() : duplicateLayer(), disabled: !hasDoc || !!transform},
+      {label: 'Layer via Cut', shortcut: 'Ctrl+Shift+J', action: () => selectionToLayer(true), disabled: !selection || activeLayer?.kind !== 'raster' || activeLayer.locked || !!transform},
+      {label: 'Duplicate Layer', action: () => duplicateLayer(), disabled: !hasDoc},
       {label: activeLayer?.locked ? 'Unlock Layer' : 'Lock Layer', action: () => toggleLock(), disabled: !activeLayer},
       {label: 'Bring to Front', action: () => setLayerEdge('front'), disabled: !activeLayer},
       {label: 'Send to Back', action: () => setLayerEdge('back'), disabled: !activeLayer},
       {label: 'Rasterize Text', action: () => rasterizeText(), disabled: activeLayer?.kind !== 'text'},
       {label: 'Delete Layer', shortcut: 'F4', action: () => deleteLayer(), disabled: !hasDoc || layers.length <= 1},
-      {label: 'Merge Down', action: mergeDown, disabled: !hasDoc},
-      {label: 'Add Layer Mask', action: addMask, disabled: !activeLayer || activeLayer.kind !== 'raster' || activeLayer.hasMask},
+      {label: selectedIds.length > 1 ? 'Merge Selected Layers' : 'Merge Down', shortcut: 'Ctrl+E', action: mergeSelectedLayers, disabled: !hasDoc || !!transform},
       {label: 'Delete Layer Mask', action: deleteMask, disabled: !activeLayer?.hasMask}
     ],
     select: [
@@ -1940,13 +2096,13 @@ export default function PhotoEditor() {
       {label: 'Zoom Out', shortcut: 'Ctrl+-', action: () => setZoom(z => stepZoomLevel(z, -1))},
       {
         label: '100%',
-        shortcut: 'Ctrl+0',
+        shortcut: 'Ctrl+1',
         action: () => {
           setZoom(1);
           setPan({x: 0, y: 0});
         }
       },
-      {label: 'Fit on Screen', shortcut: 'Ctrl+1', action: fitZoom}
+      {label: 'Fit on Screen', shortcut: 'Ctrl+0', action: fitZoom}
     ]
   };
 
@@ -2007,6 +2163,17 @@ export default function PhotoEditor() {
 
       <PhotoOptionsBar>
         <span className="photo-options__tool">{tool.toUpperCase()}</span>
+        {(tool === 'brush' || tool === 'eraser') && <>
+          <PhotoBrushPresets tip={brushTip} hardness={brushHardness} onSelect={preset => {
+            setBrushTip(preset.tip); setBrushHardness(preset.hardness); setBrushAngle(preset.angle); setBrushSpacing(preset.spacing);
+          }} />
+          <label className="photo-options__field">Spacing
+            <input className="photo-options__number" type="number" min={1} max={200} value={brushSpacing} onChange={event => setBrushSpacing(Math.max(1, Math.min(200, Number(event.target.value) || 1)))} /><span>%</span>
+          </label>
+          {(brushTip === 'square' || brushTip === 'calligraphy' || brushTip === 'texture') && <label className="photo-options__field">Angle
+            <input className="photo-options__number" type="number" min={-180} max={180} value={brushAngle} onChange={event => setBrushAngle(Math.max(-180, Math.min(180, Number(event.target.value) || 0)))} /><span>°</span>
+          </label>}
+        </>}
         {(tool === 'brush' || tool === 'eraser' || tool === 'clone' || tool === 'blurTool' || tool === 'sharpenTool' || tool === 'dodge' || tool === 'burn') && (
           <>
             <label className="photo-options__field">
@@ -2049,6 +2216,19 @@ export default function PhotoEditor() {
                 <option value="rounded">Rounded Rectangle</option>
               </select>
             </label>
+            {shapeMode === 'rounded' && (
+              <label className="photo-options__field">Radius
+                <input className="photo-options__number" type="number" min={0} step={1}
+                  aria-label="Corner radius in pixels"
+                  value={shapeCornerRadius}
+                  onChange={event => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) setShapeCornerRadius(Math.max(0, value));
+                  }}
+                />
+                <span>px</span>
+              </label>
+            )}
             <label className="photo-options__field">Mode
               <select className="photo-options__select" value={shapeStyle} onChange={e => setShapeStyle(e.target.value as ShapeStyle)}>
                 <option value="fill">Fill</option><option value="stroke">Stroke</option><option value="both">Both</option>
@@ -2419,13 +2599,18 @@ export default function PhotoEditor() {
         <div
           ref={viewportRef}
           className="photo-viewport"
-          data-tool={tool}
+          data-tool={spacePan ? 'hand' : tool}
+          data-brush-cursor={hasDoc && !spacePan && (tool === 'brush' || tool === 'eraser' || tool === 'blurTool') ? '' : undefined}
           data-zoom-out={tool === 'zoom' && altPressed ? '' : undefined}
           data-filling={isFilling ? '' : undefined}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
+          onPointerLeave={() => setBrushCursor(null)}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={event => {
+            if (guideDragRef.current) {guideDragRef.current = null; setGuideDraft(null);}
+            else onPointerUp(event);
+          }}
           onDoubleClick={() => {
             if (tool === 'pen' && penPath) finishPenPath(false);
           }}
@@ -2453,8 +2638,20 @@ export default function PhotoEditor() {
           ) : (
             <canvas ref={viewCanvasRef} className="photo-view-canvas" />
           )}
+          {hasDoc && <canvas ref={selectionCanvasRef} className="photo-selection-canvas" aria-hidden="true" />}
+          {hasDoc && showRulers && <>
+            <div className="photo-ruler-hit photo-ruler-hit--horizontal" title="Drag to create a horizontal guide" />
+            <div className="photo-ruler-hit photo-ruler-hit--vertical" title="Drag to create a vertical guide" />
+          </>}
+          {guideDraft && <div className={`photo-guide-draft photo-guide-draft--${guideDraft.orientation}`} style={guideDraft.orientation === 'vertical'
+            ? {left: textViewOrigin.dx + guideDraft.position * zoom}
+            : {top: textViewOrigin.dy + guideDraft.position * zoom}} />}
+          {hasDoc && brushCursor && !guideDraft && !spacePan && (tool === 'brush' || tool === 'eraser' || tool === 'blurTool') ? (
+            <div className="photo-brush-cursor" style={{left: brushCursor.x, top: brushCursor.y, width: brushSize * zoom, height: brushSize * zoom * (tool !== 'blurTool' && brushTip === 'calligraphy' ? .28 : 1), borderRadius: tool !== 'blurTool' && brushTip === 'square' ? 0 : '50%', transform: `translate(-50%, -50%) rotate(${tool !== 'blurTool' ? brushAngle : 0}deg)`}} />
+          ) : null}
           {editingTextLayer?.text ? (
             <PhotoTextEditor
+              key={editingTextLayer.id}
               text={editingTextLayer.text}
               left={textViewOrigin.dx + editingTextLayer.text.x * zoom}
               top={textViewOrigin.dy + editingTextLayer.text.y * zoom}
@@ -2491,37 +2688,28 @@ export default function PhotoEditor() {
                 <div className="photo-panel__actions">
                   <button
                     type="button"
-                    title="Move Layer Up"
+                    title="Move Layer Up" aria-label="Move Layer Up"
                     disabled={!hasDoc || layers.findIndex(l => l.id === activeLayerId) >= layers.length - 1}
                     onClick={() => moveLayerUp()}
                   >
-                    ▲
+                    <IconLayerAction action="up" size={18} />
                   </button>
                   <button
                     type="button"
-                    title="Move Layer Down"
+                    title="Move Layer Down" aria-label="Move Layer Down"
                     disabled={!hasDoc || layers.findIndex(l => l.id === activeLayerId) <= 0}
                     onClick={() => moveLayerDown()}
                   >
-                    ▼
+                    <IconLayerAction action="down" size={18} />
                   </button>
-                  <button type="button" title="New Layer" disabled={!hasDoc} onClick={() => addLayer()}>
-                    +
-                  </button>
-                  <button type="button" title="Adjustment" disabled={!hasDoc} onClick={addAdjustmentLayer}>
-                    ±
-                  </button>
-                  <button
-                    type="button"
-                    title="Add Mask"
-                    disabled={!activeLayer || activeLayer.kind !== 'raster' || activeLayer.hasMask}
-                    onClick={addMask}
-                  >
-                    ▭
+                  <button type="button" title="New Layer" aria-label="New Layer" disabled={!hasDoc} onClick={() => addLayer()}>
+                    <IconLayerAction action="add" size={18} />
                   </button>
                   <button
                     type="button"
                     title={activeLayer?.locked ? 'Unlock Layer' : 'Lock Layer'}
+                    aria-label={activeLayer?.locked ? 'Unlock Layer' : 'Lock Layer'}
+                    aria-pressed={!!activeLayer?.locked}
                     disabled={!activeLayer}
                     onClick={() => {
                       if (!activeLayer) return;
@@ -2529,22 +2717,24 @@ export default function PhotoEditor() {
                       setLayers(prev => prev.map(layer => layer.id === activeLayer.id ? {...layer, locked: !layer.locked} : layer));
                     }}
                   >
-                    {activeLayer?.locked ? '🔒' : '🔓'}
+                    <IconLayerAction action={activeLayer?.locked ? 'lock' : 'unlock'} size={18} />
                   </button>
                   <button
                     type="button"
-                    title="Delete Layer"
+                    title="Delete Layer" aria-label="Delete Layer" className="photo-layer-action--delete"
                     disabled={!hasDoc || layers.length <= 1}
                     onClick={() => deleteLayer()}
                   >
-                    −
+                    <IconLayerAction action="remove" size={18} />
                   </button>
                 </div>
               </div>
-              <ul className="photo-layers">
+              <ul className="photo-layers" role="listbox" aria-label="Layers" aria-multiselectable={true}>
                 {[...layers].reverse().map(layer => (
                   <li
                     key={layer.id}
+                    role="option"
+                    aria-selected={selectedIds.includes(layer.id)}
                     className={`photo-layer${layer.id === activeLayerId ? ' is-active' : ''}${layer.kind === 'adjustment' ? ' is-adj' : ''}${layer.kind === 'text' ? ' is-text' : ''}${dragLayerId === layer.id ? ' is-dragging' : ''}`}
                     draggable={renameId !== layer.id}
                     onDragStart={e => {
@@ -2562,14 +2752,19 @@ export default function PhotoEditor() {
                       setDragLayerId(null);
                     }}
                     onDragEnd={() => setDragLayerId(null)}
-                    onClick={() => {
-                      setActiveLayerId(layer.id);
+                    onClick={event => {
+
+                      if (transform && transform.layerId !== layer.id) cancelTransform();
+                      if (textEditing && textEditing.layerId !== layer.id) commitTextEditing();
+                      selectLayer(layer.id, event.shiftKey, false, event.ctrlKey || event.metaKey);
                       setEditTarget('layer');
                     }}
                     onContextMenu={e => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setActiveLayerId(layer.id);
+                      if (transform && transform.layerId !== layer.id) cancelTransform();
+                      selectLayer(layer.id, false, true);
+                      setEditTarget('layer');
                       setContextMenu({x: e.clientX, y: e.clientY, target: 'layer', layerId: layer.id});
                     }}
                     onDoubleClick={() => {
@@ -2583,15 +2778,22 @@ export default function PhotoEditor() {
                     <button
                       type="button"
                       className={`photo-layer__vis${layer.visible ? '' : ' is-off'}`}
-                      title="Visibility"
+                      title={layer.visible ? 'Hide layer' : 'Show layer'}
+                      aria-label={`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`}
+                      aria-pressed={layer.visible}
                       onClick={e => {
                         e.stopPropagation();
                         setLayers(prev => prev.map(l => (l.id === layer.id ? {...l, visible: !l.visible} : l)));
                       }}
                     >
-                      {layer.visible ? '●' : '○'}
+                      <IconEye size={18} hidden={!layer.visible} />
                     </button>
                     <div className="photo-layer__main">
+                      <div className="photo-layer__thumb-target" title="Ctrl+click thumbnail to select pixels" onClick={event => {
+                        if (event.ctrlKey || event.metaKey) {
+                          event.preventDefault(); event.stopPropagation(); selectLayerPixels(layer);
+                        }
+                      }}>
                       <LayerThumb
                         layer={layer}
                         buffers={buffersRef.current}
@@ -2600,6 +2802,7 @@ export default function PhotoEditor() {
                         docHeight={height}
                         version={historyTick}
                       />
+                      </div>
                       {renameId === layer.id ? (
                         <input
                           className="photo-layer__rename"
@@ -2629,8 +2832,9 @@ export default function PhotoEditor() {
                           ) : layer.name}
                         </span>
                       )}
+                      {layer.kind !== 'adjustment' && <PhotoLayerStyleBadge style={layer.style} />}
                       <span className="photo-layer__opacity">{Math.round(layer.opacity * 100)}%</span>
-                      {layer.locked ? <span className="photo-layer__lock" title="Locked">🔒</span> : null}
+                      {layer.locked ? <span className="photo-layer__lock" title="Locked"><IconLayerAction action="lock" size={13} /></span> : null}
                     </div>
                     {layer.hasMask ? (
                       <button
@@ -2726,11 +2930,7 @@ export default function PhotoEditor() {
       </div>
 
       {contextMenu ? (
-        <div
-          className="photo-context"
-          style={{left: contextMenu.x, top: contextMenu.y}}
-          onClick={e => e.stopPropagation()}
-        >
+        <PhotoContextMenu key={`${contextMenu.x}-${contextMenu.y}-${contextMenu.target}`} x={contextMenu.x} y={contextMenu.y}>
           {(contextMenu.target === 'layer'
             ? [
                 {
@@ -2753,7 +2953,7 @@ export default function PhotoEditor() {
                 {label: 'Delete Layer', action: () => deleteLayer(contextMenu.layerId)},
                 {label: 'Add Layer Mask', action: addMask},
                 {label: 'Delete Layer Mask', action: deleteMask},
-                {label: 'Merge Down', action: mergeDown}
+                {label: selectedIds.length > 1 ? 'Merge Selected Layers' : 'Merge Down', shortcut: 'Ctrl+E', action: mergeSelectedLayers}
               ]
             : [
                 {label: 'Undo', action: undo},
@@ -2780,9 +2980,16 @@ export default function PhotoEditor() {
               {item.label}
             </button>
           ))}
-        </div>
+        </PhotoContextMenu>
       ) : null}
 
+      {fillDialog && <FillModal source={fillSource} color={fillColor} opacity={fillOpacity} preserveTransparency={fillPreserve}
+        onSourceChange={setFillSource} onColorChange={setFillColor} onOpacityChange={setFillOpacity} onPreserveChange={setFillPreserve}
+        onCancel={() => setFillDialog(false)} onFill={() => {
+          const color = fillSource === 'foreground' ? fg : fillSource === 'background' ? bg : fillSource === 'black' ? '#000000' : fillSource === 'white' ? '#ffffff' : fillSource === 'gray' ? '#808080' : fillColor;
+          fillActiveLayer(color, fillOpacity, fillPreserve);
+          setFillDialog(false);
+        }} />}
       <NewDocumentModal
         open={newDialog}
         width={newW}
