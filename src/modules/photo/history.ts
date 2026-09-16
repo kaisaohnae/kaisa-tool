@@ -1,4 +1,5 @@
 import {createLayerCanvas} from './canvas';
+import {cloneLayerStyle} from './layers';
 import type {PhotoLayer} from './types';
 
 export type HistorySnapshot = {
@@ -18,6 +19,7 @@ export function snapshotDocument(width: number, height: number, layers: Snapshot
       ...layer,
       adjustmentParams: layer.adjustmentParams ? {...layer.adjustmentParams} : undefined,
       text: layer.text ? {...layer.text} : undefined,
+      style: layer.style ? cloneLayerStyle(layer.style) : undefined,
       data: canvas?.getContext('2d', {willReadFrequently: true})?.getImageData(0, 0, canvas.width, canvas.height) ?? null,
       maskData: mask?.getContext('2d', {willReadFrequently: true})?.getImageData(0, 0, mask.width, mask.height) ?? null
     }))
@@ -35,7 +37,8 @@ export function restoreSnapshot(snap: HistorySnapshot, buffers: Map<string, HTML
     layers: snap.layers.map(({data: _data, maskData: _maskData, ...layer}) => ({
       ...layer,
       adjustmentParams: layer.adjustmentParams ? {...layer.adjustmentParams} : undefined,
-      text: layer.text ? {...layer.text} : undefined
+      text: layer.text ? {...layer.text} : undefined,
+      style: layer.style ? cloneLayerStyle(layer.style) : undefined
     }))
   };
 }

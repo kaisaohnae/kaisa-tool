@@ -61,18 +61,89 @@ export function clearSelectionArea(canvas: HTMLCanvasElement, sel: PhotoSelectio
   }
 }
 
-export function fillSelectionArea(canvas: HTMLCanvasElement, sel: PhotoSelection | null, color: string, mask?: HTMLCanvasElement | null) {
+export function fillSelectionArea(
+  canvas: HTMLCanvasElement, sel: PhotoSelection | null, color: string, mask?: HTMLCanvasElement | null, alpha = 1
+) {
   const ctx = canvas.getContext('2d'); if (!ctx) return;
   if (mask) {
     const fill = createLayerCanvas(canvas.width, canvas.height);
     const fillCtx = fill.getContext('2d');
     if (!fillCtx) return;
+    fillCtx.globalAlpha = alpha;
     fillCtx.fillStyle = color; fillCtx.fillRect(0, 0, fill.width, fill.height);
+    fillCtx.globalAlpha = 1;
     fillCtx.globalCompositeOperation = 'destination-in'; fillCtx.drawImage(mask, 0, 0);
     ctx.drawImage(fill, 0, 0);
   } else {
-    ctx.save(); clipSelection(ctx, sel); ctx.fillStyle = color; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
+    ctx.save(); clipSelection(ctx, sel); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
   }
+}
+
+// Runs `draw` clipped to the active selection (raster mask when one exists, e.g. from a
+// lasso/wand selection, or the selection's own path otherwise). Used by tools like the
+// gradient tool that need to stay inside the selection instead of painting the whole canvas.
+export function withSelectionClip(
+  canvas: HTMLCanvasElement,
+  sel: PhotoSelection | null,
+  mask: HTMLCanvasElement | null | undefined,
+  draw: (ctx: CanvasRenderingContext2D) => void
+) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  if (mask) {
+    const layer = createLayerCanvas(canvas.width, canvas.height);
+    const layerCtx = layer.getContext('2d');
+    if (!layerCtx) return;
+    draw(layerCtx);
+    layerCtx.globalCompositeOperation = 'destination-in';
+    layerCtx.drawImage(mask, 0, 0);
+    ctx.drawImage(layer, 0, 0);
+  } else if (sel) {
+    ctx.save();
+    clipSelection(ctx, sel);
+    draw(ctx);
+    ctx.restore();
+  } else {
+    draw(ctx);
+  }
+}
+
+export function strokeSelectionArea(
+  canvas: HTMLCanvasElement,
+  sel: PhotoSelection,
+  width: number,
+  color: string,
+  location: 'inside' | 'center' | 'outside' = 'center',
+  alpha = 1
+) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || width <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  if (location === 'center') {
+    ctx.lineWidth = width;
+    pathFromSelection(ctx, sel);
+    ctx.stroke();
+  } else if (location === 'inside') {
+    pathFromSelection(ctx, sel);
+    ctx.clip();
+    ctx.lineWidth = width * 2;
+    pathFromSelection(ctx, sel);
+    ctx.stroke();
+  } else {
+    // Clip to "outside the selection": a donut made from the full canvas rect minus the
+    // selection shape via the even-odd fill rule, then stroke centered on the boundary so
+    // only the outer half (which the clip lets through) ends up visible.
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    pathFromSelection(ctx, sel);
+    ctx.clip('evenodd');
+    ctx.lineWidth = width * 2;
+    pathFromSelection(ctx, sel);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export function copySelectionArea(source: HTMLCanvasElement, sel: PhotoSelection, mask?: HTMLCanvasElement | null) {

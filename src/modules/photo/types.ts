@@ -9,10 +9,15 @@ export type PhotoTool =
   | 'fill'
   | 'gradient'
   | 'clone'
+  | 'blurTool'
+  | 'sharpenTool'
+  | 'dodge'
+  | 'burn'
   | 'eyedropper'
   | 'text'
   | 'crop'
   | 'shape'
+  | 'pen'
   | 'hand'
   | 'zoom'
   | 'transform';
@@ -30,6 +35,10 @@ export interface TextLayerData {
   color: string;
   align: 'left' | 'center' | 'right';
   lineHeight: number;
+  tracking: number;
+  underline: boolean;
+  strokeWidth: number;
+  strokeColor: string;
 }
 
 export type AdjustmentType = 'brightnessContrast' | 'hueSaturation' | 'levels';
@@ -59,6 +68,32 @@ export interface AdjustmentParams {
   gamma?: number;
 }
 
+export interface LayerStyle {
+  dropShadow: {
+    enabled: boolean;
+    color: string;
+    opacity: number;
+    offsetX: number;
+    offsetY: number;
+    blur: number;
+  };
+  border: {
+    enabled: boolean;
+    size: number;
+    color: string;
+    location?: 'inside' | 'center' | 'outside';
+  };
+  overlay: {
+    enabled: boolean;
+    type: 'color' | 'gradient';
+    color: string;
+    gradientStart: string;
+    gradientEnd: string;
+    angle: number;
+    opacity: number;
+  };
+}
+
 export interface PhotoLayer {
   id: string;
   name: string;
@@ -72,9 +107,18 @@ export interface PhotoLayer {
   adjustment?: AdjustmentType;
   adjustmentParams?: AdjustmentParams;
   text?: TextLayerData;
+  style?: LayerStyle;
 }
 
 export type SelectionShape = 'rect' | 'ellipse' | 'lasso';
+
+export interface PenAnchor {
+  x: number;
+  y: number;
+  // Absolute doc-space position of the dragged-out (forward) curve handle for this anchor.
+  // The backward handle used by the segment behind this anchor is its mirror through the point.
+  handle?: {x: number; y: number} | null;
+}
 
 export type ShapeMode = 'rect' | 'ellipse' | 'rounded';
 export type ShapeStyle = 'fill' | 'stroke' | 'both';
@@ -118,8 +162,10 @@ export const TOOL_SHORTCUTS: Record<string, PhotoTool> = {
   t: 'text',
   c: 'crop',
   u: 'shape',
+  p: 'pen',
   h: 'hand',
-  z: 'zoom'
+  z: 'zoom',
+  o: 'dodge'
 };
 
 export const BLEND_MODES: {value: BlendMode; label: string}[] = [
@@ -139,6 +185,31 @@ export const BLEND_MODES: {value: BlendMode; label: string}[] = [
 
 export const DEFAULT_FG = '#000000';
 export const DEFAULT_BG = '#ffffff';
+export const DEFAULT_LAYER_STYLE: LayerStyle = {
+  dropShadow: {
+    enabled: false,
+    color: '#000000',
+    opacity: 0.6,
+    offsetX: 8,
+    offsetY: 8,
+    blur: 12
+  },
+  border: {
+    enabled: false,
+    size: 3,
+    color: '#ffffff',
+    location: 'outside'
+  },
+  overlay: {
+    enabled: false,
+    type: 'color',
+    color: '#ffffff',
+    gradientStart: '#ff6b6b',
+    gradientEnd: '#4d96ff',
+    angle: 0,
+    opacity: 1
+  }
+};
 export const DEFAULT_ADJUSTMENT: AdjustmentParams = {
   brightness: 0,
   contrast: 0,

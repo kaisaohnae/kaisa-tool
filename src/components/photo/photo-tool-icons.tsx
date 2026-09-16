@@ -117,6 +117,22 @@ export function IconClone(props: IconProps) {
   );
 }
 
+export function IconBlur(props: IconProps) {
+  return <Svg {...props}><path d="M12 3S6.5 10 6.5 14.2a5.5 5.5 0 0011 0C17.5 10 12 3 12 3z" /><path d="M9 15.5c.6 1.3 1.5 2 3 2" opacity=".55" /></Svg>;
+}
+
+export function IconSharpen(props: IconProps) {
+  return <Svg {...props}><path d="M12 3l7.5 16h-15L12 3z" /><path d="M12 8v7M9.5 15h5" /></Svg>;
+}
+
+export function IconDodge(props: IconProps) {
+  return <Svg {...props}><circle cx="10" cy="10" r="5" /><path d="M14 14l6 6M10 2v2M2 10h2M16 10h2" /></Svg>;
+}
+
+export function IconBurn(props: IconProps) {
+  return <Svg {...props}><path d="M13 3c1 4-3 5-1 8 1-2 3-2 4-4 3 4 3 9-1 12-3 2-8 1-10-3-2-5 2-8 4-10 0 3 1 4 2 5-1-4 1-5 2-8z" /></Svg>;
+}
+
 export function IconEyedropper(props: IconProps) {
   return (
     <Svg {...props}>
@@ -154,6 +170,15 @@ export function IconShape(props: IconProps) {
     <Svg {...props}>
       <rect x="4" y="5" width="10" height="9" />
       <ellipse cx="16" cy="15" rx="4" ry="3.5" />
+    </Svg>
+  );
+}
+export function IconPen(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 20l1.2-4.4L15 6l3 3-9.8 9.8z" />
+      <path d="M13 8l3 3" />
+      <circle cx="18.5" cy="5.5" r="1.6" fill="currentColor" stroke="none" />
     </Svg>
   );
 }
@@ -224,10 +249,15 @@ const MAP: Record<PhotoTool, (props: IconProps) => ReactElement> = {
   fill: IconFill,
   gradient: IconGradient,
   clone: IconClone,
+  blurTool: IconBlur,
+  sharpenTool: IconSharpen,
+  dodge: IconDodge,
+  burn: IconBurn,
   eyedropper: IconEyedropper,
   text: IconText,
   crop: IconCrop,
   shape: IconShape,
+  pen: IconPen,
   hand: IconHand,
   zoom: IconZoom,
   transform: IconTransform

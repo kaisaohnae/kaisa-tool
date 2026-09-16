@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react';
 import {PhotoMenubar, type PhotoMenuKey} from './photo-menubar';
+import {PhotoLayerStylePanel} from './photo-layer-style-panel';
 import {NewDocumentModal} from './photo-modals';
 import {PhotoOptionsBar} from './photo-options-bar';
 import {PhotoSidebar} from './photo-sidebar';
@@ -21,12 +22,21 @@ import {
   drawCloneStroke,
   drawLinearGradient,
   drawTransformedImage,
+  deserializePhotoProject,
+  deserializeDocument,
+  serializeDocument,
+  saveWorkspace,
+  loadWorkspace,
+  clearWorkspace,
+  type LiveDocumentInput,
   exportComposite,
   fillSelectionArea,
   flipCanvas,
   floodFill,
   getOpaqueBounds,
+  getTextLayerBounds,
   applyMaskToCanvas,
+  drawTextLayer,
   cloneCanvas,
   invertCanvas,
   magicWandBounds,
@@ -37,37 +47,58 @@ import {
   sharpenCanvas,
   snapshotDocument,
   type HistorySnapshot,
+  type LayerStyle,
   BLEND_MODES,
-  MAX_ZOOM,
-  MIN_ZOOM,
   HISTORY_LIMIT,
   DEFAULT_ADJUSTMENT,
   DEFAULT_BG,
   DEFAULT_FG,
+  DEFAULT_LAYER_STYLE,
   TOOL_SHORTCUTS,
   boundsFromPoints,
   clampZoom,
+  stepZoomLevel,
   clientToDoc,
   createAdjustmentLayer,
   createRasterLayer,
   createTextLayer,
+  cloneLayerStyle,
   duplicateLayerState,
+  applyRetouchStamp,
+  applyRetouchStroke,
   drawShape,
+  drawVectorPath,
+  tracePenPath,
+  strokeSelectionArea,
   fitZoom as calculateFitZoom,
   getViewOrigin as calculateViewOrigin,
   loadNewDocumentSettings,
+  nextDocId,
   nextDocName,
   rectFromDrag,
   reorderLayer,
+  moveLayerToEdge,
+  moveLayerBeside,
+  toggleLayerLock,
+  rasterizeTextLayer,
+  translateRasterCanvas,
+  saneGridSpacing,
+  snapBox,
+  snapPoint,
+  serializePhotoProject,
   selectionToMask,
   saveNewDocumentSettings,
+  syncLayerSequence,
   invertSelectionMask,
   toCompositeInputs,
   type BlendMode,
   type ContextMenuState,
   type PhotoLayer,
+  type PenAnchor,
   type PhotoSelection,
   type PhotoTool,
+  type PhotoGuide,
+  type RetouchMode,
   type TextLayerData,
   type SelectionShape,
   type ShapeMode,
@@ -77,6 +108,92 @@ import {
 
 type MenuKey = PhotoMenuKey | null;
 type TransformHandle = 'move' | 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
+
+// One open document's full state, parked in `sessionsRef` while another tab is active.
+// The active document's state lives directly in this component's useState/useRef hooks (as
+// before multi-document support existed); switching tabs captures the outgoing document into
+// a DocumentSession and restores the incoming one from its parked session.
+type DocumentSession = {
+  id: string;
+  docName: string;
+  width: number;
+  height: number;
+  layers: PhotoLayer[];
+  activeLayerId: string;
+  selection: PhotoSelection | null;
+  draftSel: PhotoSelection | null;
+  cropDraft: PhotoSelection | null;
+  transform: TransformState | null;
+  editTarget: 'layer' | 'mask';
+  zoom: number;
+  pan: {x: number; y: number};
+  dirty: boolean;
+  guides: PhotoGuide[];
+  buffers: Map<string, HTMLCanvasElement>;
+  masks: Map<string, HTMLCanvasElement>;
+  selectionMask: HTMLCanvasElement | null;
+  history: HistorySnapshot[];
+  historyIndex: number;
+};
+
+type DocTab = {id: string; name: string; dirty: boolean};
+
+// Small live preview of a layer's current content, shown before its name in the layers list.
+// `version` is a change counter (historyTick) the caller bumps on every edit, since the layer's
+// canvas is mutated in place by drawing tools and isn't itself React state.
+function LayerThumb({
+  layer,
+  buffers,
+  masks,
+  docWidth,
+  docHeight,
+  version
+}: {
+  layer: PhotoLayer;
+  buffers: Map<string, HTMLCanvasElement>;
+  masks: Map<string, HTMLCanvasElement>;
+  docWidth: number;
+  docHeight: number;
+  version: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const tw = canvas.width, th = canvas.height;
+    ctx.clearRect(0, 0, tw, th);
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(0, 0, tw, th);
+    ctx.fillStyle = '#4a4a4a';
+    for (let y = 0; y < th; y += 4) {
+      for (let x = (Math.round(y / 4) % 2 ? 0 : 4); x < tw; x += 8) ctx.fillRect(x, y, 4, 4);
+    }
+    if (docWidth <= 0 || docHeight <= 0) return;
+    const scale = Math.min(tw / docWidth, th / docHeight);
+    const dw = docWidth * scale, dh = docHeight * scale;
+    const dx = (tw - dw) / 2, dy = (th - dh) / 2;
+    if (layer.kind === 'raster') {
+      const src = buffers.get(layer.id);
+      if (!src) return;
+      const mask = layer.hasMask ? masks.get(layer.id) : null;
+      ctx.drawImage(mask ? applyMaskToCanvas(src, mask) : src, dx, dy, dw, dh);
+    } else if (layer.kind === 'text' && layer.text) {
+      const tmp = createLayerCanvas(docWidth, docHeight);
+      const tctx = tmp.getContext('2d');
+      if (tctx) drawTextLayer(tctx, layer.text);
+      ctx.drawImage(tmp, dx, dy, dw, dh);
+    } else if (layer.kind === 'adjustment') {
+      ctx.fillStyle = '#cfd6dd';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('\u25c6', tw / 2, th / 2);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layer.id, layer.kind, layer.hasMask, layer.text, buffers, masks, docWidth, docHeight, version]);
+  return <canvas ref={canvasRef} width={30} height={22} className="photo-layer__thumb" />;
+}
 
 export default function PhotoEditor() {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -99,13 +216,23 @@ export default function PhotoEditor() {
     cloneOffsetY?: number;
     lassoPoints?: {x: number; y: number}[];
     selectionStart?: PhotoSelection | null;
+    anchorIndex?: number;
   } | null>(null);
   const spacePanRef = useRef(false);
   const clipboardRef = useRef<HTMLCanvasElement | null>(null);
+  const layerStyleClipboardRef = useRef<LayerStyle | null>(null);
   const transformSourceRef = useRef<HTMLCanvasElement | null>(null);
   const cloneSourceRef = useRef<{x: number; y: number} | null>(null);
   const moveSourceRef = useRef<HTMLCanvasElement | null>(null);
   const moveMaskSourceRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Multi-document tabs: `sessionsRef` holds every OPEN document that isn't currently active
+  // (the active one lives in the state/refs above); `docTabs` is just the lightweight list used
+  // to render the tab strip, and `activeDocIdRef` is the stable id of whichever document's
+  // state currently lives in those hooks above.
+  const sessionsRef = useRef<Map<string, DocumentSession>>(new Map());
+  const activeDocIdRef = useRef('');
+  const [docTabs, setDocTabs] = useState<DocTab[]>([]);
 
   const [docName, setDocName] = useState(nextDocName());
   const [width, setWidth] = useState(1200);
@@ -115,9 +242,12 @@ export default function PhotoEditor() {
   const [tool, setTool] = useState<PhotoTool>('move');
   const [fg, setFg] = useState(DEFAULT_FG);
   const [bg, setBg] = useState(DEFAULT_BG);
+  const [fgAlpha, setFgAlpha] = useState(100);
+  const [bgAlpha, setBgAlpha] = useState(100);
   const [brushSize, setBrushSize] = useState(12);
   const [brushHardness, setBrushHardness] = useState(100);
   const [brushOpacity, setBrushOpacity] = useState(100);
+  const [retouchStrength, setRetouchStrength] = useState(35);
   const [shapeMode, setShapeMode] = useState<ShapeMode>('rect');
   const [shapeStyle, setShapeStyle] = useState<ShapeStyle>('fill');
   const [shapeStrokeWidth, setShapeStrokeWidth] = useState(2);
@@ -131,6 +261,12 @@ export default function PhotoEditor() {
   const [menuOpen, setMenuOpen] = useState<MenuKey>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [cursor, setCursor] = useState({x: 0, y: 0});
+  const [altPressed, setAltPressed] = useState(false);
+  const [isFilling, setIsFilling] = useState(false);
+  const [penPath, setPenPath] = useState<PenAnchor[] | null>(null);
+  const [penHover, setPenHover] = useState<{x: number; y: number} | null>(null);
+  const [zoomInputDraft, setZoomInputDraft] = useState<string | null>(null);
+  const [dragLayerId, setDragLayerId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [hasDoc, setHasDoc] = useState(false);
   const [newDialog, setNewDialog] = useState(false);
@@ -149,6 +285,16 @@ export default function PhotoEditor() {
   const [textFontWeight, setTextFontWeight] = useState<'normal' | 'bold'>('normal');
   const [textFontStyle, setTextFontStyle] = useState<'normal' | 'italic'>('normal');
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left');
+  const [textTracking, setTextTracking] = useState(0);
+  const [textLineHeight, setTextLineHeight] = useState(1.2);
+  const [textUnderline, setTextUnderline] = useState(false);
+  const [textStrokeWidth, setTextStrokeWidth] = useState(0);
+  const [textStrokeColor, setTextStrokeColor] = useState('#000000');
+  const [showGrid, setShowGrid] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [gridSize, setGridSize] = useState(50);
+  const [guides, setGuides] = useState<PhotoGuide[]>([]);
   const [status, setStatus] = useState('Ready');
   const [historyTick, setHistoryTick] = useState(0);
   const [sidebarTab, setSidebarTab] = useState<'layers' | 'history'>('layers');
@@ -237,6 +383,11 @@ export default function PhotoEditor() {
     setTextFontWeight(layer.text.fontWeight);
     setTextFontStyle(layer.text.fontStyle);
     setTextAlign(layer.text.align);
+    setTextTracking(layer.text.tracking);
+    setTextLineHeight(layer.text.lineHeight);
+    setTextUnderline(layer.text.underline);
+    setTextStrokeWidth(layer.text.strokeWidth);
+    setTextStrokeColor(layer.text.strokeColor);
     setTextEditing({layerId: layer.id, isNew, original: {...layer.text}});
   }, [pushHistory]);
 
@@ -266,6 +417,17 @@ export default function PhotoEditor() {
     setStatus('Text editing cancelled');
   }, [layers, textEditing, updateTextLayer]);
 
+  useEffect(() => {
+    if (textEditing && tool !== 'text') commitTextEditing();
+  }, [tool, textEditing, commitTextEditing]);
+
+  useEffect(() => {
+    if (penPath && tool !== 'pen') {
+      setPenPath(null);
+      setPenHover(null);
+    }
+  }, [tool, penPath]);
+
   const getDocPoint = useCallback(
     (clientX: number, clientY: number) => {
       const viewport = viewportRef.current;
@@ -275,6 +437,11 @@ export default function PhotoEditor() {
     },
     [pan, width, height, zoom]
   );
+
+  const snapDocPoint = useCallback((point: {x: number; y: number}) => {
+    if (!snapEnabled) return point;
+    return snapPoint(point, {guides, gridSize, zoom});
+  }, [snapEnabled, guides, gridSize, zoom]);
 
   const getViewOrigin = useCallback(() => {
     const viewport = viewportRef.current;
@@ -319,6 +486,43 @@ export default function PhotoEditor() {
 
     ctx.imageSmoothingEnabled = zoom < 1;
     ctx.drawImage(composed, dx, dy, width * zoom, height * zoom);
+
+    if (showGrid) {
+      const spacing = saneGridSpacing(gridSize, zoom);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(dx, dy, width * zoom, height * zoom);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(40,160,220,0.32)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 0; x <= width; x += spacing) {
+        const screenX = Math.round(dx + x * zoom) + 0.5;
+        ctx.moveTo(screenX, dy); ctx.lineTo(screenX, dy + height * zoom);
+      }
+      for (let y = 0; y <= height; y += spacing) {
+        const screenY = Math.round(dy + y * zoom) + 0.5;
+        ctx.moveTo(dx, screenY); ctx.lineTo(dx + width * zoom, screenY);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (guides.length) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(dx, dy, width * zoom, height * zoom); ctx.clip();
+      ctx.strokeStyle = '#00d8ff'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const guide of guides) {
+        if (guide.orientation === 'vertical') {
+          const x = Math.round(dx + guide.position * zoom) + 0.5;
+          ctx.moveTo(x, dy); ctx.lineTo(x, dy + height * zoom);
+        } else {
+          const y = Math.round(dy + guide.position * zoom) + 0.5;
+          ctx.moveTo(dx, y); ctx.lineTo(dx + width * zoom, y);
+        }
+      }
+      ctx.stroke(); ctx.restore();
+    }
 
     if (transform && transformSourceRef.current) {
       ctx.save();
@@ -404,7 +608,93 @@ export default function PhotoEditor() {
         }
       }
     }
-  }, [hasDoc, width, height, layerInputs, pan, zoom, liveSel, cropDraft, transform, getViewOrigin]);
+
+    if (penPath && penPath.length) {
+      const toScreen = (p: {x: number; y: number}) => ({x: dx + p.x * zoom, y: dy + p.y * zoom});
+      ctx.save();
+      ctx.strokeStyle = '#55aaff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const screenAnchors = penPath.map(a => ({
+        x: toScreen(a).x,
+        y: toScreen(a).y,
+        handle: a.handle ? toScreen(a.handle) : null
+      }));
+      tracePenPath(ctx, screenAnchors, false);
+      ctx.stroke();
+
+      if (penHover) {
+        const last = penPath[penPath.length - 1];
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        tracePenPath(ctx, [
+          {x: toScreen(last).x, y: toScreen(last).y, handle: last.handle ? toScreen(last.handle) : null},
+          {x: toScreen(penHover).x, y: toScreen(penHover).y, handle: null}
+        ], false);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      penPath.forEach((anchor, index) => {
+        const sp = toScreen(anchor);
+        if (anchor.handle) {
+          const hp = toScreen(anchor.handle);
+          ctx.strokeStyle = '#55aaff';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sp.x, sp.y);
+          ctx.lineTo(hp.x, hp.y);
+          ctx.stroke();
+          ctx.fillStyle = '#55aaff';
+          ctx.beginPath();
+          ctx.arc(hp.x, hp.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const isFirst = index === 0;
+        const closeHover = isFirst && penHover && penPath.length >= 2
+          && Math.hypot(penHover.x - anchor.x, penHover.y - anchor.y) <= Math.max(4, 6 / zoom);
+        ctx.fillStyle = closeHover ? '#ffcc33' : '#ffffff';
+        ctx.strokeStyle = '#2288dd';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, closeHover ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(85,170,255,0.95)';
+      ctx.font = '12px sans-serif';
+      const firstScreen = toScreen(penPath[0]);
+      ctx.fillText('Enter/dbl-click: finish · click first point: close · Esc: cancel', firstScreen.x, Math.max(14, firstScreen.y - 10));
+    }
+
+    if (showRulers) {
+      const ruler = 20;
+      const step = saneGridSpacing(Math.min(gridSize, 50), zoom, 48);
+      ctx.fillStyle = '#30343a';
+      ctx.fillRect(0, 0, vw, ruler);
+      ctx.fillRect(0, 0, ruler, vh);
+      ctx.strokeStyle = '#9ca8b5';
+      ctx.fillStyle = '#cbd3dc';
+      ctx.font = '9px ui-monospace, monospace';
+      ctx.beginPath();
+      for (let value = 0; value <= width; value += step) {
+        const x = dx + value * zoom;
+        if (x < ruler || x > vw) continue;
+        ctx.moveTo(x + .5, ruler); ctx.lineTo(x + .5, 12);
+        ctx.fillText(String(Math.round(value)), x + 2, 9);
+      }
+      for (let value = 0; value <= height; value += step) {
+        const y = dy + value * zoom;
+        if (y < ruler || y > vh) continue;
+        ctx.moveTo(ruler, y + .5); ctx.lineTo(12, y + .5);
+        ctx.save(); ctx.translate(8, y + 2); ctx.rotate(-Math.PI / 2); ctx.fillText(String(Math.round(value)), 0, 0); ctx.restore();
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#25282c'; ctx.fillRect(0, 0, ruler, ruler);
+    }
+  }, [hasDoc, width, height, layerInputs, pan, zoom, liveSel, cropDraft, transform, getViewOrigin, showGrid, showRulers, gridSize, guides, penPath, penHover]);
 
   useEffect(() => {
     paint();
@@ -439,8 +729,164 @@ export default function PhotoEditor() {
     return buffersRef.current.get(activeLayerId) ?? null;
   }, [activeLayerId, activeLayer, editTarget]);
 
+  const finishPenPath = useCallback((closed: boolean) => {
+    const anchors = penPath;
+    const canvas = getPaintTarget();
+    if (anchors && anchors.length >= 2 && canvas) {
+      const penMask = selection ? (selectionMaskRef.current ?? selectionToMask(selection, width, height)) : null;
+      pushHistory('Pen Path');
+      drawVectorPath(canvas, anchors, closed, shapeStyle, fg, bg, shapeStrokeWidth, selection, penMask, fgAlpha / 100, bgAlpha / 100);
+      paint();
+      setStatus('Pen path applied');
+    }
+    setPenPath(null);
+    setPenHover(null);
+    drawingRef.current = null;
+  }, [penPath, getPaintTarget, selection, width, height, shapeStyle, fg, bg, fgAlpha, bgAlpha, shapeStrokeWidth, paint, pushHistory]);
+
+  const cancelPenPath = useCallback(() => {
+    setPenPath(null);
+    setPenHover(null);
+    drawingRef.current = null;
+    setStatus('Pen path cancelled');
+  }, []);
+
+  // Bundles every piece of state that belongs to ONE document (as opposed to a global tool
+  // preference like brush size or fg/bg color) so it can be parked while another tab is active.
+  const captureCurrentSession = useCallback(
+    (id: string): DocumentSession => ({
+      id,
+      docName,
+      width,
+      height,
+      layers,
+      activeLayerId,
+      selection,
+      draftSel,
+      cropDraft,
+      transform,
+      editTarget,
+      zoom,
+      pan,
+      dirty,
+      guides,
+      buffers: buffersRef.current,
+      masks: masksRef.current,
+      selectionMask: selectionMaskRef.current,
+      history: historyRef.current,
+      historyIndex: historyIndexRef.current
+    }),
+    [docName, width, height, layers, activeLayerId, selection, draftSel, cropDraft, transform, editTarget, zoom, pan, dirty, guides]
+  );
+
+  // Restores a parked DocumentSession into the live state/refs above, making it the active document.
+  const applySession = useCallback((session: DocumentSession) => {
+    buffersRef.current = session.buffers;
+    masksRef.current = session.masks;
+    selectionMaskRef.current = session.selectionMask;
+    historyRef.current = session.history;
+    historyIndexRef.current = session.historyIndex;
+    setDocName(session.docName);
+    setWidth(session.width);
+    setHeight(session.height);
+    setLayers(session.layers);
+    setActiveLayerId(session.activeLayerId);
+    setSelection(session.selection);
+    setDraftSel(session.draftSel);
+    setCropDraft(session.cropDraft);
+    setTransform(session.transform);
+    transformSourceRef.current = null;
+    setEditTarget(session.editTarget);
+    setZoom(session.zoom);
+    setPan(session.pan);
+    setDirty(session.dirty);
+    setGuides(session.guides);
+    setHasDoc(true);
+    // Tool-interaction state is transient and shouldn't leak from one document into another.
+    setPenPath(null);
+    setPenHover(null);
+    setIsFilling(false);
+    setZoomInputDraft(null);
+    setContextMenu(null);
+    setTextEditing(null);
+    drawingRef.current = null;
+    cloneSourceRef.current = null;
+    moveSourceRef.current = null;
+    moveMaskSourceRef.current = null;
+    setHistoryTick(t => t + 1);
+    setStatus(session.docName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Switches the active tab: parks the outgoing document's state and restores the target's.
+  const switchToDocument = useCallback(
+    (id: string) => {
+      if (id === activeDocIdRef.current) return;
+      const parked = sessionsRef.current.get(id);
+      if (!parked) return;
+      const outgoing = captureCurrentSession(activeDocIdRef.current);
+      sessionsRef.current.set(outgoing.id, outgoing);
+      sessionsRef.current.delete(id);
+      activeDocIdRef.current = id;
+      applySession(parked);
+    },
+    [captureCurrentSession, applySession]
+  );
+
+  // Closes a tab (prompting first if it has unsaved changes). Closing the active tab switches to
+  // a neighboring tab, or clears the workspace back to the "no document" state if it was the last one.
+  const closeDocument = useCallback(
+    (id: string) => {
+      const isActive = id === activeDocIdRef.current;
+      const closingDirty = isActive ? dirty : sessionsRef.current.get(id)?.dirty ?? false;
+      if (closingDirty && !window.confirm('This document has unsaved changes. Close it anyway?')) return;
+
+      const idx = docTabs.findIndex(t => t.id === id);
+      const remaining = docTabs.filter(t => t.id !== id);
+      sessionsRef.current.delete(id);
+
+      if (isActive) {
+        const nextTab = docTabs[idx + 1] ?? docTabs[idx - 1] ?? null;
+        if (nextTab) {
+          const parked = sessionsRef.current.get(nextTab.id);
+          activeDocIdRef.current = nextTab.id;
+          if (parked) {
+            sessionsRef.current.delete(nextTab.id);
+            applySession(parked);
+          }
+        } else {
+          activeDocIdRef.current = '';
+          buffersRef.current = new Map();
+          masksRef.current = new Map();
+          selectionMaskRef.current = null;
+          historyRef.current = [];
+          historyIndexRef.current = -1;
+          setHasDoc(false);
+          setLayers([]);
+          setActiveLayerId('');
+          setSelection(null);
+          setDraftSel(null);
+          setCropDraft(null);
+          setTransform(null);
+          setDirty(false);
+          setPenPath(null);
+          setPenHover(null);
+          setStatus('Ready');
+        }
+      }
+      setDocTabs(remaining);
+    },
+    [docTabs, dirty, applySession]
+  );
+
   const createDocument = useCallback(
     (w: number, h: number, fill: 'white' | 'transparent' | 'bg', name?: string, seedCanvas?: HTMLCanvasElement) => {
+      // Photoshop-style: creating a new document opens it as an additional tab rather than
+      // replacing whatever is already open, so park the current one first (if any).
+      if (hasDoc && activeDocIdRef.current) {
+        const outgoing = captureCurrentSession(activeDocIdRef.current);
+        sessionsRef.current.set(outgoing.id, outgoing);
+      }
       const layer = createRasterLayer('Background');
       const id = layer.id;
       const canvas =
@@ -448,7 +894,10 @@ export default function PhotoEditor() {
         createLayerCanvas(w, h, fill === 'white' ? '#ffffff' : fill === 'bg' ? bg : undefined);
       buffersRef.current = new Map([[id, canvas]]);
       masksRef.current = new Map();
-      setDocName(name ?? nextDocName());
+      const docId = nextDocId();
+      activeDocIdRef.current = docId;
+      const docLabel = name ?? nextDocName();
+      setDocName(docLabel);
       setWidth(w);
       setHeight(h);
       setLayers([layer]);
@@ -462,6 +911,7 @@ export default function PhotoEditor() {
       setEditTarget('layer');
       setZoom(Math.min(1, Math.max(0.2, Math.min((innerWidth - 360) / w, (innerHeight - 120) / h))));
       setPan({x: 0, y: 0});
+      setGuides([]);
       setHasDoc(true);
       setDirty(false);
       const snap = snapshotDocument(w, h, [{...layer, canvas, mask: null}], id, 'New');
@@ -469,9 +919,151 @@ export default function PhotoEditor() {
       historyIndexRef.current = 0;
       setHistoryTick(t => t + 1);
       setStatus(`${w} × ${h}`);
+      setDocTabs(tabs => [...tabs, {id: docId, name: docLabel, dirty: false}]);
     },
-    [bg]
+    [bg, hasDoc, captureCurrentSession]
   );
+
+  // Keeps the active tab's label/dirty-dot in sync with the live docName/dirty state, so a
+  // rename or edit shows up on its tab immediately without any extra plumbing at each call site.
+  useEffect(() => {
+    if (!activeDocIdRef.current) return;
+    const activeId = activeDocIdRef.current;
+    setDocTabs(tabs =>
+      tabs.map(t => (t.id === activeId && (t.name !== docName || t.dirty !== dirty) ? {...t, name: docName, dirty} : t))
+    );
+  }, [docName, dirty]);
+
+  // Restores whatever was auto-saved (see the autosave effect below) so a browser refresh or
+  // crash doesn't lose in-progress work. Runs once on mount, before the user can interact; undo
+  // history isn't part of the save, so every restored document starts with one fresh entry.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const workspace = await loadWorkspace();
+        if (cancelled || !workspace || !workspace.documents.length) return;
+        const restored = await Promise.all(workspace.documents.map(deserializeDocument));
+        if (cancelled || !restored.length) return;
+        const sessions: DocumentSession[] = restored.map(doc => {
+          const snap = snapshotDocument(
+            doc.width,
+            doc.height,
+            doc.layers.map(l => ({...l, canvas: doc.buffers.get(l.id) ?? null, mask: doc.masks.get(l.id) ?? null})),
+            doc.activeLayerId,
+            'Restored'
+          );
+          return {
+            id: doc.id,
+            docName: doc.docName,
+            width: doc.width,
+            height: doc.height,
+            layers: doc.layers,
+            activeLayerId: doc.activeLayerId,
+            selection: null,
+            draftSel: null,
+            cropDraft: null,
+            transform: null,
+            editTarget: 'layer',
+            zoom: doc.zoom,
+            pan: doc.pan,
+            dirty: doc.dirty,
+            guides: doc.guides,
+            buffers: doc.buffers,
+            masks: doc.masks,
+            selectionMask: null,
+            history: [snap],
+            historyIndex: 0
+          };
+        });
+        const activeId =
+          workspace.activeDocId && sessions.some(s => s.id === workspace.activeDocId) ? workspace.activeDocId : sessions[0].id;
+        for (const session of sessions) {
+          if (session.id !== activeId) sessionsRef.current.set(session.id, session);
+        }
+        activeDocIdRef.current = activeId;
+        const activeSession = sessions.find(s => s.id === activeId) ?? sessions[0];
+        applySession(activeSession);
+        setDocTabs(sessions.map(s => ({id: s.id, name: s.docName, dirty: s.dirty})));
+        setStatus('Restored previous session');
+      } catch (e) {
+        console.error('Failed to restore auto-saved workspace', e);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-saves the current workspace (every open document's layers + canvases) to IndexedDB a
+  // short idle moment after anything changes, so a refresh restores it via the effect above.
+  // Undo/redo history is deliberately left out - only the current state of each document is kept.
+  const persistWorkspaceNow = useCallback(async () => {
+    try {
+      if (!docTabs.length) {
+        await clearWorkspace();
+        return;
+      }
+      const activeId = activeDocIdRef.current;
+      const liveDocs: LiveDocumentInput[] = [];
+      if (activeId) {
+        liveDocs.push({
+          id: activeId,
+          docName,
+          width,
+          height,
+          layers,
+          activeLayerId,
+          zoom,
+          pan,
+          guides,
+          dirty,
+          buffers: buffersRef.current,
+          masks: masksRef.current
+        });
+      }
+      for (const session of sessionsRef.current.values()) {
+        liveDocs.push({
+          id: session.id,
+          docName: session.docName,
+          width: session.width,
+          height: session.height,
+          layers: session.layers,
+          activeLayerId: session.activeLayerId,
+          zoom: session.zoom,
+          pan: session.pan,
+          guides: session.guides,
+          dirty: session.dirty,
+          buffers: session.buffers,
+          masks: session.masks
+        });
+      }
+      const documents = await Promise.all(liveDocs.map(serializeDocument));
+      await saveWorkspace({version: 1, activeDocId: activeId, documents, savedAt: Date.now()});
+    } catch (e) {
+      console.error('Autosave failed', e);
+    }
+  }, [docTabs, docName, width, height, layers, activeLayerId, zoom, pan, guides, dirty]);
+
+  const autosaveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => { void persistWorkspaceNow(); }, 1500);
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    };
+  }, [historyTick, docTabs, persistWorkspaceNow]);
+
+  // Best-effort immediate flush right before the tab actually goes away, so an edit made just
+  // before a refresh isn't lost to the debounce above waiting out its 1.5s.
+  useEffect(() => {
+    const flush = () => { void persistWorkspaceNow(); };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+    };
+  }, [persistWorkspaceNow]);
 
   const addLayer = useCallback(
     (name?: string) => {
@@ -532,6 +1124,46 @@ export default function PhotoEditor() {
     [activeLayerId, layers, pushHistory]
   );
 
+  const copyLayerStyle = useCallback(
+    (id?: string) => {
+      const source = layers.find(layer => layer.id === (id ?? activeLayerId));
+      if (!source || source.kind === 'adjustment') {
+        setStatus('Select a raster or text layer');
+        return;
+      }
+      layerStyleClipboardRef.current = cloneLayerStyle(source.style ?? DEFAULT_LAYER_STYLE);
+      setStatus(`Copied style: ${source.name}`);
+    },
+    [activeLayerId, layers]
+  );
+
+  const pasteLayerStyle = useCallback(
+    (id?: string) => {
+      const targetId = id ?? activeLayerId;
+      const target = layers.find(layer => layer.id === targetId);
+      const copied = layerStyleClipboardRef.current;
+      if (!target || target.kind === 'adjustment') {
+        setStatus('Select a raster or text layer');
+        return;
+      }
+      if (!copied) {
+        setStatus('Copy a layer style first (Shift+F2)');
+        return;
+      }
+      pushHistory('Paste Layer Style');
+      setLayers(prev => prev.map(layer =>
+        layer.id === targetId ? {...layer, style: cloneLayerStyle(copied)} : layer
+      ));
+      setStatus(`Pasted style: ${target.name}`);
+    },
+    [activeLayerId, layers, pushHistory]
+  );
+
+  const updateActiveLayerStyle = useCallback((style: LayerStyle) => {
+    if (!activeLayerId) return;
+    setLayers(prev => prev.map(layer => layer.id === activeLayerId ? {...layer, style} : layer));
+  }, [activeLayerId]);
+
   const deleteLayer = useCallback(
     (id?: string) => {
       const target = id ?? activeLayerId;
@@ -575,6 +1207,50 @@ export default function PhotoEditor() {
     [activeLayerId, layers, pushHistory]
   );
 
+  const setLayerEdge = useCallback((edge: 'front' | 'back', id = activeLayerId) => {
+    if (!id) return;
+    pushHistory(edge === 'front' ? 'Bring to Front' : 'Send to Back');
+    setLayers(prev => moveLayerToEdge(prev, id, edge));
+  }, [activeLayerId, pushHistory]);
+
+  const toggleLock = useCallback((id = activeLayerId) => {
+    if (!id) return;
+    const layer = layers.find(item => item.id === id);
+    pushHistory(layer?.locked ? 'Unlock Layer' : 'Lock Layer');
+    setLayers(prev => toggleLayerLock(prev, id));
+  }, [activeLayerId, layers, pushHistory]);
+
+  const rasterizeText = useCallback((id = activeLayerId) => {
+    const layer = layers.find(item => item.id === id);
+    if (layer?.kind !== 'text') {
+      setStatus('Select a text layer');
+      return;
+    }
+    pushHistory('Rasterize Text');
+    const result = rasterizeTextLayer(layers, id, buffersRef.current, width, height);
+    if (result) {
+      setLayers(result.layers);
+      setTextEditing(prev => prev?.layerId === id ? null : prev);
+      setStatus('Text rasterized');
+    }
+  }, [activeLayerId, layers, width, height, pushHistory]);
+
+  const nudgeActiveLayer = useCallback((dx: number, dy: number) => {
+    if (!activeLayer || activeLayer.locked || !hasDoc) return;
+    pushHistory('Nudge Layer');
+    if (activeLayer.kind === 'text' && activeLayer.text) {
+      updateTextLayer(activeLayer.id, {x: activeLayer.text.x + dx, y: activeLayer.text.y + dy});
+    } else if (activeLayer.kind === 'raster') {
+      const source = buffersRef.current.get(activeLayer.id);
+      if (source) buffersRef.current.set(activeLayer.id, translateRasterCanvas(source, dx, dy));
+      if (activeLayer.hasMask && activeLayer.maskLinked) {
+        const mask = masksRef.current.get(activeLayer.id);
+        if (mask) masksRef.current.set(activeLayer.id, translateRasterCanvas(mask, dx, dy));
+      }
+      paint();
+    }
+  }, [activeLayer, hasDoc, pushHistory, updateTextLayer, paint]);
+
   const mergeDown = useCallback(() => {
     const idx = layers.findIndex(l => l.id === activeLayerId);
     if (idx <= 0) {
@@ -583,32 +1259,38 @@ export default function PhotoEditor() {
     }
     const below = layers[idx - 1];
     const current = layers[idx];
-    if (below.kind !== 'raster' || current.kind !== 'raster') {
-      setStatus('Merge requires raster layers');
+    if (below.kind === 'adjustment' || current.kind === 'adjustment') {
+      setStatus('Merge does not support adjustment layers');
       return;
     }
-    const belowCanvas = buffersRef.current.get(below.id);
-    const currentCanvas = buffersRef.current.get(current.id);
+    let workingLayers = layers;
+    if (below.kind === 'text') workingLayers = rasterizeTextLayer(workingLayers, below.id, buffersRef.current, width, height)?.layers ?? workingLayers;
+    if (current.kind === 'text') workingLayers = rasterizeTextLayer(workingLayers, current.id, buffersRef.current, width, height)?.layers ?? workingLayers;
+    const rasterBelow = workingLayers.find(layer => layer.id === below.id)!;
+    const rasterCurrent = workingLayers.find(layer => layer.id === current.id)!;
+    const belowCanvas = buffersRef.current.get(rasterBelow.id);
+    const currentCanvas = buffersRef.current.get(rasterCurrent.id);
     if (!belowCanvas || !currentCanvas) return;
     pushHistory('Merge Down');
     let draw = currentCanvas;
-    if (current.hasMask) {
-      const mask = masksRef.current.get(current.id);
+    if (rasterCurrent.hasMask) {
+      const mask = masksRef.current.get(rasterCurrent.id);
       if (mask) draw = applyMaskToCanvas(currentCanvas, mask);
     }
     const ctx = belowCanvas.getContext('2d');
     if (ctx) {
       ctx.save();
-      ctx.globalAlpha = current.opacity;
+      ctx.globalAlpha = rasterCurrent.opacity;
+      ctx.globalCompositeOperation = rasterCurrent.blendMode as GlobalCompositeOperation;
       ctx.drawImage(draw, 0, 0);
       ctx.restore();
     }
-    buffersRef.current.delete(current.id);
-    masksRef.current.delete(current.id);
-    setLayers(prev => prev.filter(l => l.id !== current.id));
-    setActiveLayerId(below.id);
+    buffersRef.current.delete(rasterCurrent.id);
+    masksRef.current.delete(rasterCurrent.id);
+    setLayers(workingLayers.filter(l => l.id !== rasterCurrent.id));
+    setActiveLayerId(rasterBelow.id);
     setStatus('Merged down');
-  }, [layers, activeLayerId, pushHistory]);
+  }, [layers, activeLayerId, pushHistory, width, height]);
 
   const addMask = useCallback(() => {
     if (!activeLayer || activeLayer.kind !== 'raster' || activeLayer.hasMask) return;
@@ -723,6 +1405,60 @@ export default function PhotoEditor() {
       const file = files?.[0];
       if (!file) return;
       try {
+        if (/\.kphoto$/i.test(file.name)) {
+          const project = await deserializePhotoProject(file);
+          // Opening a project opens it as an additional tab, same as New Document.
+          if (hasDoc && activeDocIdRef.current) {
+            const outgoing = captureCurrentSession(activeDocIdRef.current);
+            sessionsRef.current.set(outgoing.id, outgoing);
+          }
+          const docId = nextDocId();
+          activeDocIdRef.current = docId;
+          buffersRef.current = project.buffers;
+          masksRef.current = project.masks;
+          syncLayerSequence(project.layers);
+          setDocName(project.name);
+          setWidth(project.width);
+          setHeight(project.height);
+          setLayers(project.layers);
+          setActiveLayerId(project.activeLayerId);
+          setFg(project.settings.foreground ?? DEFAULT_FG);
+          setBg(project.settings.background ?? DEFAULT_BG);
+          setShowGrid(project.settings.showGrid ?? false);
+          setShowRulers(project.settings.showRulers ?? false);
+          setSnapEnabled(project.settings.snapEnabled ?? true);
+          setGridSize(project.settings.gridSize ?? 50);
+          setGuides(project.settings.guides ?? []);
+          setSelection(null);
+          selectionMaskRef.current = null;
+          setDraftSel(null);
+          setCropDraft(null);
+          setTransform(null);
+          transformSourceRef.current = null;
+          setTextEditing(null);
+          setEditTarget('layer');
+          setZoom(Math.min(1, Math.max(0.2, Math.min((innerWidth - 360) / project.width, (innerHeight - 120) / project.height))));
+          setPan({x: 0, y: 0});
+          setHasDoc(true);
+          setDirty(false);
+          const snap = snapshotDocument(
+            project.width,
+            project.height,
+            project.layers.map(layer => ({
+              ...layer,
+              canvas: project.buffers.get(layer.id) ?? null,
+              mask: project.masks.get(layer.id) ?? null
+            })),
+            project.activeLayerId,
+            'Open Project'
+          );
+          historyRef.current = [snap];
+          historyIndexRef.current = 0;
+          setHistoryTick(tick => tick + 1);
+          setStatus(`Opened project: ${file.name}`);
+          setDocTabs(tabs => [...tabs, {id: docId, name: project.name, dirty: false}]);
+          return;
+        }
         const canvas = await canvasFromImageFile(file);
         createDocument(
           canvas.width,
@@ -737,8 +1473,51 @@ export default function PhotoEditor() {
         setStatus(e instanceof Error ? e.message : 'Open failed');
       }
     },
-    [createDocument]
+    [createDocument, hasDoc, captureCurrentSession]
   );
+
+  const saveProject = useCallback(async () => {
+    if (!hasDoc) return;
+    try {
+      const blob = await serializePhotoProject({
+        name: docName || 'Untitled',
+        width,
+        height,
+        activeLayerId,
+        layers,
+        buffers: buffersRef.current,
+        masks: masksRef.current,
+        settings: {
+          foreground: fg,
+          background: bg,
+          showGrid,
+          showRulers,
+          snapEnabled,
+          gridSize,
+          guides
+        }
+      });
+      downloadBlob(blob, `${docName || 'Untitled'}.kphoto`);
+      setDirty(false);
+      setStatus('Project saved');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Project save failed');
+    }
+  }, [
+    hasDoc,
+    docName,
+    width,
+    height,
+    activeLayerId,
+    layers,
+    fg,
+    bg,
+    showGrid,
+    showRulers,
+    snapEnabled,
+    gridSize,
+    guides
+  ]);
 
   const saveAs = useCallback(
     async (mime: 'image/png' | 'image/jpeg') => {
@@ -824,9 +1603,9 @@ export default function PhotoEditor() {
     if (!canvas) return;
     pushHistory('Fill');
     const color = editTarget === 'mask' ? '#ffffff' : fg;
-    fillSelectionArea(canvas, selection, color, selectionMaskRef.current);
+    fillSelectionArea(canvas, selection, color, selectionMaskRef.current, editTarget === 'mask' ? 1 : fgAlpha / 100);
     paint();
-  }, [getPaintTarget, pushHistory, selection, fg, paint, editTarget]);
+  }, [getPaintTarget, pushHistory, selection, fg, fgAlpha, paint, editTarget]);
 
   const getActiveRasterCanvas = useCallback(() => {
     if (!activeLayer || activeLayer.kind !== 'raster') return null;
@@ -847,6 +1626,23 @@ export default function PhotoEditor() {
     },
     [getActiveRasterCanvas, pushHistory, paint]
   );
+
+  const flipActiveLayer = useCallback((horizontal: boolean) => {
+    const canvas = getActiveRasterCanvas();
+    if (!canvas || !activeLayer) {
+      setStatus('Select a raster layer');
+      return;
+    }
+    const label = horizontal ? 'Flip Horizontal' : 'Flip Vertical';
+    pushHistory(label);
+    flipCanvas(canvas, horizontal);
+    if (activeLayer.hasMask && activeLayer.maskLinked) {
+      const mask = masksRef.current.get(activeLayer.id);
+      if (mask) flipCanvas(mask, horizontal);
+    }
+    paint();
+    setStatus(label);
+  }, [activeLayer, getActiveRasterCanvas, paint, pushHistory]);
 
   const applyRotate90 = useCallback(
     (clockwise: boolean) => {
@@ -881,15 +1677,19 @@ export default function PhotoEditor() {
     [getActiveRasterCanvas, pushHistory, paint, layers.length, activeLayerId, activeLayer, width, height]
   );
 
-  const applyCrop = useCallback(() => {
-    if (!cropDraft || cropDraft.w < 1 || cropDraft.h < 1) return;
+  const applyCrop = useCallback((area?: PhotoSelection) => {
+    const cropArea = area ?? cropDraft;
+    if (!cropArea || cropArea.w < 1 || cropArea.h < 1) {
+      setStatus('Create a selection before cropping');
+      return;
+    }
     pushHistory('Crop');
-    const {x, y, w, h} = {
-      x: Math.round(cropDraft.x),
-      y: Math.round(cropDraft.y),
-      w: Math.round(cropDraft.w),
-      h: Math.round(cropDraft.h)
-    };
+    const x = Math.max(0, Math.floor(cropArea.x));
+    const y = Math.max(0, Math.floor(cropArea.y));
+    const right = Math.min(width, Math.ceil(cropArea.x + cropArea.w));
+    const bottom = Math.min(height, Math.ceil(cropArea.y + cropArea.h));
+    const w = Math.max(1, right - x);
+    const h = Math.max(1, bottom - y);
     for (const layer of layers) {
       if (layer.kind !== 'raster') continue;
       const src = buffersRef.current.get(layer.id);
@@ -919,7 +1719,13 @@ export default function PhotoEditor() {
     setCropDraft(null);
     setSelection(null);
     setStatus(`Cropped to ${w} × ${h}`);
-  }, [cropDraft, pushHistory, layers]);
+  }, [cropDraft, pushHistory, layers, width, height]);
+
+  const commitZoomInput = useCallback((raw: string) => {
+    const pct = Number(raw);
+    if (Number.isFinite(pct) && pct > 0) setZoom(clampZoom(pct / 100));
+    setZoomInputDraft(null);
+  }, []);
 
   const fitZoom = useCallback(() => {
     const viewport = viewportRef.current;
@@ -936,6 +1742,7 @@ export default function PhotoEditor() {
     closeContext();
     if (e.button === 2) return;
     const pt = getDocPoint(e.clientX, e.clientY);
+    const snappedPt = snapDocPoint(pt);
     setCursor({x: Math.round(pt.x), y: Math.round(pt.y)});
     const currentTool = spacePanRef.current ? 'hand' : tool;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -944,11 +1751,11 @@ export default function PhotoEditor() {
       const handle = hitTransformHandle(pt, transform);
       if (!handle) return;
       drawingRef.current = {
-        lastX: pt.x,
-        lastY: pt.y,
+        lastX: snappedPt.x,
+        lastY: snappedPt.y,
         mode: 'transform',
-        startX: pt.x,
-        startY: pt.y,
+        startX: snappedPt.x,
+        startY: snappedPt.y,
         handle,
         startBox: {x: transform.x, y: transform.y, w: transform.w, h: transform.h}
       };
@@ -960,7 +1767,7 @@ export default function PhotoEditor() {
       return;
     }
     if (currentTool === 'zoom') {
-      setZoom(z => clampZoom(z * (e.altKey ? 1 / 1.25 : 1.25)));
+      setZoom(z => stepZoomLevel(z, e.altKey ? -1 : 1));
       return;
     }
     if (currentTool === 'transform') {
@@ -983,40 +1790,80 @@ export default function PhotoEditor() {
     }
     if (currentTool === 'text') {
       if (textEditing) commitTextEditing();
+      const hitTextLayer = [...layers].reverse().find(layer => {
+        if (layer.kind !== 'text' || !layer.text || !layer.visible || layer.locked) return false;
+        const bounds = getTextLayerBounds(layer.text);
+        const padding = Math.max(4, layer.text.fontSize * 0.15);
+        return pt.x >= bounds.x - padding
+          && pt.x <= bounds.x + bounds.w + padding
+          && pt.y >= bounds.y - padding
+          && pt.y <= bounds.y + bounds.h + padding;
+      });
+      if (hitTextLayer) {
+        startTextEditing(hitTextLayer);
+        setStatus(`Editing text: ${hitTextLayer.name}`);
+        return;
+      }
       pushHistory('New Text Layer');
-      const layer = createTextLayer(Math.round(pt.x), Math.round(pt.y), fg, {
+      const layer = createTextLayer(Math.round(snappedPt.x), Math.round(snappedPt.y), fg, {
         fontFamily: textFontFamily,
         fontSize: textFontSize,
         fontWeight: textFontWeight,
         fontStyle: textFontStyle,
-        align: textAlign
+        align: textAlign,
+        tracking: textTracking,
+        lineHeight: textLineHeight,
+        underline: textUnderline,
+        strokeWidth: textStrokeWidth,
+        strokeColor: textStrokeColor
       });
       setLayers(prev => [...prev, layer]);
       startTextEditing(layer, true);
       return;
     }
+    if (currentTool === 'pen') {
+      if (penPath && penPath.length) {
+        const first = penPath[0];
+        const closeDist = Math.max(4, 6 / zoom);
+        if (penPath.length >= 2 && Math.hypot(pt.x - first.x, pt.y - first.y) <= closeDist) {
+          finishPenPath(true);
+          return;
+        }
+        const anchorIndex = penPath.length;
+        setPenPath(prev => (prev ? [...prev, {x: snappedPt.x, y: snappedPt.y, handle: null}] : prev));
+        drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'pen', startX: pt.x, startY: pt.y, anchorIndex};
+        return;
+      }
+      setPenPath([{x: snappedPt.x, y: snappedPt.y, handle: null}]);
+      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'pen', startX: pt.x, startY: pt.y, anchorIndex: 0};
+      setStatus('Pen: click to add points · drag for a curve · Enter/double-click to finish · Esc to cancel');
+      return;
+    }
     if (currentTool === 'fill') {
       const canvas = getPaintTarget();
       if (!canvas) return;
+      const fillMask = selection ? (selectionMaskRef.current ?? selectionToMask(selection, width, height)) : null;
       pushHistory('Fill');
-      floodFill(canvas, pt.x, pt.y, editTarget === 'mask' ? (e.altKey ? '#000000' : '#ffffff') : fg);
+      setIsFilling(true);
+      floodFill(canvas, pt.x, pt.y, editTarget === 'mask' ? (e.altKey ? '#000000' : '#ffffff') : fg, 24, fillMask, editTarget === 'mask' ? 255 : Math.round(fgAlpha / 100 * 255));
       paint();
+      requestAnimationFrame(() => requestAnimationFrame(() => setIsFilling(false)));
       return;
     }
     if (currentTool === 'select') {
-      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'select', startX: pt.x, startY: pt.y};
-      setDraftSel({shape: 'rect', x: pt.x, y: pt.y, w: 0, h: 0});
+      drawingRef.current = {lastX: snappedPt.x, lastY: snappedPt.y, mode: 'select', startX: snappedPt.x, startY: snappedPt.y};
+      setDraftSel({shape: 'rect', x: snappedPt.x, y: snappedPt.y, w: 0, h: 0});
       return;
     }
     if (currentTool === 'ellipse') {
-      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'ellipse', startX: pt.x, startY: pt.y};
-      setDraftSel({shape: 'ellipse', x: pt.x, y: pt.y, w: 0, h: 0});
+      drawingRef.current = {lastX: snappedPt.x, lastY: snappedPt.y, mode: 'ellipse', startX: snappedPt.x, startY: snappedPt.y};
+      setDraftSel({shape: 'ellipse', x: snappedPt.x, y: snappedPt.y, w: 0, h: 0});
       return;
     }
     if (currentTool === 'shape') {
       if (!getPaintTarget()) return;
-      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'shape', startX: pt.x, startY: pt.y};
-      setDraftSel({shape: shapeMode === 'rounded' ? 'rect' : shapeMode, x: pt.x, y: pt.y, w: 0, h: 0});
+      drawingRef.current = {lastX: snappedPt.x, lastY: snappedPt.y, mode: 'shape', startX: snappedPt.x, startY: snappedPt.y};
+      setDraftSel({shape: shapeMode === 'rounded' ? 'rect' : shapeMode, x: snappedPt.x, y: snappedPt.y, w: 0, h: 0});
       return;
     }
     if (currentTool === 'lasso') {
@@ -1082,8 +1929,8 @@ export default function PhotoEditor() {
       return;
     }
     if (currentTool === 'crop') {
-      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: 'crop', startX: pt.x, startY: pt.y};
-      setCropDraft({shape: 'rect', x: pt.x, y: pt.y, w: 0, h: 0});
+      drawingRef.current = {lastX: snappedPt.x, lastY: snappedPt.y, mode: 'crop', startX: snappedPt.x, startY: snappedPt.y};
+      setCropDraft({shape: 'rect', x: snappedPt.x, y: snappedPt.y, w: 0, h: 0});
       return;
     }
     if (currentTool === 'move') {
@@ -1132,6 +1979,7 @@ export default function PhotoEditor() {
       const erase = editTarget === 'mask' ? false : currentTool === 'eraser';
       // On mask, eraser paints black
       const maskEraseAsBlack = editTarget === 'mask' && currentTool === 'eraser';
+      const paintAlpha = erase ? 1 : fgAlpha / 100;
       drawBrushStroke(
         ctx,
         pt.x,
@@ -1142,8 +1990,21 @@ export default function PhotoEditor() {
         maskEraseAsBlack ? '#000000' : color,
         erase,
         brushHardness,
-        brushOpacity / 100
+        brushOpacity / 100 * paintAlpha
       );
+      paint();
+      return;
+    }
+    if (currentTool === 'blurTool' || currentTool === 'sharpenTool' || currentTool === 'dodge' || currentTool === 'burn') {
+      if (editTarget === 'mask' || activeLayer?.kind !== 'raster' || activeLayer.locked) {
+        setStatus(editTarget === 'mask' ? 'Retouch tools cannot edit masks' : 'Select an unlocked raster layer');
+        return;
+      }
+      const canvas = buffersRef.current.get(activeLayer.id);
+      if (!canvas) return;
+      pushHistory(currentTool === 'blurTool' ? 'Blur Stroke' : currentTool === 'sharpenTool' ? 'Sharpen Stroke' : currentTool === 'dodge' ? 'Dodge Stroke' : 'Burn Stroke');
+      drawingRef.current = {lastX: pt.x, lastY: pt.y, mode: currentTool, startX: pt.x, startY: pt.y};
+      applyRetouchStamp(canvas, pt.x, pt.y, currentTool, {size: brushSize, hardness: brushHardness, strength: retouchStrength});
       paint();
     }
   };
@@ -1151,10 +2012,22 @@ export default function PhotoEditor() {
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!hasDoc) return;
     const pt = getDocPoint(e.clientX, e.clientY);
+    const snappedPt = snapDocPoint(pt);
     setCursor({x: Math.round(pt.x), y: Math.round(pt.y)});
+    if (tool === 'pen' && penPath) setPenHover(pt);
     const drag = drawingRef.current;
     if (!drag) return;
 
+    if (drag.mode === 'pen' && typeof drag.anchorIndex === 'number') {
+      const anchorIndex = drag.anchorIndex;
+      setPenPath(prev => {
+        if (!prev) return prev;
+        const next = [...prev];
+        next[anchorIndex] = {...next[anchorIndex], handle: {x: pt.x, y: pt.y}};
+        return next;
+      });
+      return;
+    }
     if (drag.mode === 'pan') {
       setPan(p => ({x: p.x + (e.clientX - drag.lastX), y: p.y + (e.clientY - drag.lastY)}));
       drag.lastX = e.clientX;
@@ -1162,8 +2035,8 @@ export default function PhotoEditor() {
       return;
     }
     if (drag.mode === 'transform' && drag.startBox && drag.handle) {
-      const dx = pt.x - drag.startX;
-      const dy = pt.y - drag.startY;
+      const dx = snappedPt.x - drag.startX;
+      const dy = snappedPt.y - drag.startY;
       let {x, y, w, h} = drag.startBox;
       const handle = drag.handle;
       if (handle === 'move') {
@@ -1181,13 +2054,14 @@ export default function PhotoEditor() {
           y = drag.startBox.y + dy;
         }
       }
-      setTransform(t => (t ? {...t, x, y, w, h} : t));
+      const nextBox = snapEnabled ? snapBox({x, y, w, h}, {guides, gridSize, zoom}, handle === 'move' ? 'move' : 'resize') : {x, y, w, h};
+      setTransform(t => (t ? {...t, ...nextBox} : t));
       return;
     }
     if (drag.mode === 'select' || drag.mode === 'ellipse' || drag.mode === 'crop' || drag.mode === 'shape') {
       const shape = drag.mode === 'ellipse' ? 'ellipse' : drag.mode === 'shape' ? shapeMode : 'rect';
       const selectionShape = shape === 'rounded' ? 'rect' : shape;
-      const rect = rectFromDrag(drag.startX, drag.startY, pt.x, pt.y, width, height, selectionShape);
+      const rect = rectFromDrag(drag.startX, drag.startY, snappedPt.x, snappedPt.y, width, height, selectionShape);
       if (drag.mode === 'select' || drag.mode === 'ellipse') setDraftSel(rect);
       else if (drag.mode === 'shape') setDraftSel(rect);
       else setCropDraft(rect);
@@ -1209,8 +2083,14 @@ export default function PhotoEditor() {
     if (drag.mode === 'move') {
       const source = moveSourceRef.current;
       if (!source || activeLayer?.locked || activeLayer?.kind !== 'raster') return;
-      const dx = Math.round(pt.x - drag.startX);
-      const dy = Math.round(pt.y - drag.startY);
+      let dx = Math.round(pt.x - drag.startX);
+      let dy = Math.round(pt.y - drag.startY);
+      if (snapEnabled) {
+        const bounds = getOpaqueBounds(source) ?? {x: 0, y: 0, w: width, h: height};
+        const snapped = snapBox({...bounds, x: bounds.x + dx, y: bounds.y + dy}, {guides, gridSize, zoom});
+        dx = Math.round(snapped.x - bounds.x);
+        dy = Math.round(snapped.y - bounds.y);
+      }
       const next = createLayerCanvas(width, height);
       const ctx = next.getContext('2d');
       if (ctx) ctx.drawImage(source, dx, dy);
@@ -1238,10 +2118,23 @@ export default function PhotoEditor() {
       return;
     }
     if (drag.mode === 'text-move' && drag.startBox && activeLayer?.kind === 'text' && !activeLayer.locked) {
-      updateTextLayer(activeLayer.id, {
-        x: Math.round(drag.startBox.x + pt.x - drag.startX),
-        y: Math.round(drag.startBox.y + pt.y - drag.startY)
+      const next = snapDocPoint({
+        x: drag.startBox.x + pt.x - drag.startX,
+        y: drag.startBox.y + pt.y - drag.startY
       });
+      updateTextLayer(activeLayer.id, {
+        x: Math.round(next.x),
+        y: Math.round(next.y)
+      });
+      return;
+    }
+    if (drag.mode === 'blurTool' || drag.mode === 'sharpenTool' || drag.mode === 'dodge' || drag.mode === 'burn') {
+      const canvas = activeLayer?.kind === 'raster' ? buffersRef.current.get(activeLayer.id) : null;
+      if (!canvas || !activeLayer || activeLayer.locked || editTarget === 'mask') return;
+      applyRetouchStroke(canvas, drag.lastX, drag.lastY, pt.x, pt.y, drag.mode as RetouchMode, {
+        size: brushSize, hardness: brushHardness, strength: retouchStrength
+      });
+      drag.lastX = pt.x; drag.lastY = pt.y; paint();
       return;
     }
     if (drag.mode === 'draw' || drag.mode === 'erase') {
@@ -1252,7 +2145,7 @@ export default function PhotoEditor() {
       const maskEraseAsBlack = editTarget === 'mask' && drag.mode === 'erase';
       const erase = editTarget === 'mask' ? false : drag.mode === 'erase';
       const color = maskEraseAsBlack ? '#000000' : editTarget === 'mask' ? fg : fg;
-      drawBrushStroke(ctx, drag.lastX, drag.lastY, pt.x, pt.y, brushSize, color, erase, brushHardness, brushOpacity / 100);
+      drawBrushStroke(ctx, drag.lastX, drag.lastY, pt.x, pt.y, brushSize, color, erase, brushHardness, brushOpacity / 100 * (erase ? 1 : fgAlpha / 100));
       drag.lastX = pt.x;
       drag.lastY = pt.y;
       paint();
@@ -1295,7 +2188,7 @@ export default function PhotoEditor() {
       const canvas = getPaintTarget();
       if (canvas && draftSel && draftSel.w >= 1 && draftSel.h >= 1) {
         pushHistory('Shape');
-        drawShape(canvas, draftSel.x, draftSel.y, draftSel.w, draftSel.h, shapeMode, shapeStyle, fg, bg, shapeStrokeWidth);
+        drawShape(canvas, draftSel.x, draftSel.y, draftSel.w, draftSel.h, shapeMode, shapeStyle, fg, bg, shapeStrokeWidth, fgAlpha / 100, bgAlpha / 100);
         paint();
       }
       setDraftSel(null);
@@ -1316,8 +2209,9 @@ export default function PhotoEditor() {
       const pt = getDocPoint(e.clientX, e.clientY);
       const canvas = getPaintTarget();
       if (canvas) {
+        const gradientMask = selection ? (selectionMaskRef.current ?? selectionToMask(selection, width, height)) : null;
         pushHistory('Gradient');
-        drawLinearGradient(canvas, drag.startX, drag.startY, pt.x, pt.y, fg, bg);
+        drawLinearGradient(canvas, drag.startX, drag.startY, pt.x, pt.y, fg, bg, selection, gradientMask, fgAlpha / 100, bgAlpha / 100);
         paint();
       }
     }
@@ -1336,6 +2230,8 @@ export default function PhotoEditor() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setAltPressed(true);
+
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
 
@@ -1353,9 +2249,29 @@ export default function PhotoEditor() {
         beginTransform();
         return;
       }
+      if (mod && e.shiftKey && key === 'n') {
+        e.preventDefault();
+        addLayer();
+        return;
+      }
       if (mod && key === 'n') {
         e.preventDefault();
         setNewDialog(true);
+        return;
+      }
+      if (mod && key === 'j') {
+        e.preventDefault();
+        duplicateLayer();
+        return;
+      }
+      if (mod && key === 'r') {
+        e.preventDefault();
+        setShowRulers(value => !value);
+        return;
+      }
+      if (mod && (e.key === "'" || e.code === 'Quote')) {
+        e.preventDefault();
+        setShowGrid(value => !value);
         return;
       }
       if (mod && key === 'o') {
@@ -1365,7 +2281,8 @@ export default function PhotoEditor() {
       }
       if (mod && key === 's') {
         e.preventDefault();
-        void saveAs(e.shiftKey ? 'image/jpeg' : 'image/png');
+        if (e.shiftKey) void saveAs('image/png');
+        else void saveProject();
         return;
       }
       if (mod && key === 'z' && !e.shiftKey) {
@@ -1410,12 +2327,12 @@ export default function PhotoEditor() {
       }
       if (mod && (key === '=' || key === '+')) {
         e.preventDefault();
-        setZoom(z => Math.min(MAX_ZOOM, z * 1.25));
+        setZoom(z => stepZoomLevel(z, 1));
         return;
       }
       if (mod && key === '-') {
         e.preventDefault();
-        setZoom(z => Math.max(MIN_ZOOM, z / 1.25));
+        setZoom(z => stepZoomLevel(z, -1));
         return;
       }
       if (mod && key === '0') {
@@ -1432,6 +2349,7 @@ export default function PhotoEditor() {
 
       if (e.key === 'Escape') {
         if (transform) cancelTransform();
+        else if (penPath) cancelPenPath();
         else if (cropDraft) setCropDraft(null);
         else if (textEditing) cancelTextEditing();
         else if (contextMenu) closeContext();
@@ -1440,6 +2358,11 @@ export default function PhotoEditor() {
         return;
       }
       if (e.key === 'Enter') {
+        if (penPath) {
+          e.preventDefault();
+          finishPenPath(false);
+          return;
+        }
         if (transform) {
           e.preventDefault();
           applyTransform();
@@ -1451,10 +2374,57 @@ export default function PhotoEditor() {
           return;
         }
       }
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (e.shiftKey) copyLayerStyle();
+        else pasteLayerStyle();
+        return;
+      }
+      if (e.key === 'F3') {
+        e.preventDefault();
+        addLayer();
+        return;
+      }
+      if (e.key === 'F4') {
+        e.preventDefault();
+        deleteLayer();
+        return;
+      }
+      if (e.key === 'F5') {
+        e.preventDefault();
+        applyCrop(selection ?? undefined);
+        return;
+      }
+      if (e.key === 'F7') {
+        e.preventDefault();
+        flipActiveLayer(true);
+        return;
+      }
+      if (e.key === 'F8') {
+        e.preventDefault();
+        flipActiveLayer(false);
+        return;
+      }
+      if (e.key === 'F12') {
+        if (selection) {
+          e.preventDefault();
+          deselect();
+        }
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && hasDoc) {
         e.preventDefault();
         if (activeLayer?.kind === 'text') deleteLayer();
         else clearSelectionContent();
+        return;
+      }
+      if (tool === 'move' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        const amount = e.shiftKey ? 10 : 1;
+        nudgeActiveLayer(
+          e.key === 'ArrowLeft' ? -amount : e.key === 'ArrowRight' ? amount : 0,
+          e.key === 'ArrowUp' ? -amount : e.key === 'ArrowDown' ? amount : 0
+        );
         return;
       }
       if (key === 'x' && !mod) {
@@ -1475,6 +2445,10 @@ export default function PhotoEditor() {
         setBrushSize(s => Math.min(500, s + (e.shiftKey ? 10 : 1)));
         return;
       }
+      if (!mod && e.shiftKey && key === 'o') {
+        setTool(current => current === 'dodge' ? 'burn' : 'dodge');
+        return;
+      }
       if (!mod && !e.altKey && !e.shiftKey && /^[0-9]$/.test(e.key) && activeLayerId) {
         const opacity = e.key === '0' ? 1 : Number(e.key) / 10;
         setLayers(prev => prev.map(layer => layer.id === activeLayerId ? {...layer, opacity} : layer));
@@ -1486,16 +2460,21 @@ export default function PhotoEditor() {
 
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') spacePanRef.current = false;
+      if (e.key === 'Alt') setAltPressed(false);
     };
+    const onBlur = () => setAltPressed(false);
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, [
     saveAs,
+    saveProject,
     undo,
     redo,
     selectAll,
@@ -1505,6 +2484,7 @@ export default function PhotoEditor() {
     pasteClipboard,
     fitZoom,
     cropDraft,
+    selection,
     textEditing,
     contextMenu,
     menuOpen,
@@ -1522,7 +2502,17 @@ export default function PhotoEditor() {
     invertSelection,
     activeLayer,
     deleteLayer,
-    cancelTextEditing
+    copyLayerStyle,
+    pasteLayerStyle,
+    flipActiveLayer,
+    cancelTextEditing,
+    addLayer,
+    duplicateLayer,
+    tool,
+    nudgeActiveLayer,
+    penPath,
+    finishPenPath,
+    cancelPenPath
   ]);
 
   useEffect(() => {
@@ -1542,6 +2532,18 @@ export default function PhotoEditor() {
     };
   }, [openFiles]);
 
+  // Keep the browser page itself from zooming (Ctrl+wheel, or a trackpad pinch, which browsers
+  // report as a wheel event with ctrlKey set) while the photo editor is open - the in-app Zoom
+  // tool and mouse wheel over the canvas already handle zoom, and .photo-viewport's own onWheel
+  // preventDefault only covers gestures made over the canvas itself, not the rest of the app.
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) e.preventDefault();
+    };
+    window.addEventListener('wheel', onWheel, {passive: false});
+    return () => window.removeEventListener('wheel', onWheel);
+  }, []);
+
   const menuItems: Record<
     Exclude<MenuKey, null>,
     {label: string; shortcut?: string; action: () => void; disabled?: boolean}[]
@@ -1549,8 +2551,9 @@ export default function PhotoEditor() {
     file: [
       {label: 'New…', shortcut: 'Ctrl+N', action: () => setNewDialog(true)},
       {label: 'Open…', shortcut: 'Ctrl+O', action: () => fileInputRef.current?.click()},
-      {label: 'Save as PNG', shortcut: 'Ctrl+S', action: () => void saveAs('image/png'), disabled: !hasDoc},
-      {label: 'Save as JPG', shortcut: 'Ctrl+Shift+S', action: () => void saveAs('image/jpeg'), disabled: !hasDoc},
+      {label: 'Save Project (.kphoto)', shortcut: 'Ctrl+S', action: () => void saveProject(), disabled: !hasDoc},
+      {label: 'Export as PNG', shortcut: 'Ctrl+Shift+S', action: () => void saveAs('image/png'), disabled: !hasDoc},
+      {label: 'Export as JPG', action: () => void saveAs('image/jpeg'), disabled: !hasDoc},
       {
         label: 'Close',
         action: () => {
@@ -1574,7 +2577,25 @@ export default function PhotoEditor() {
       {label: 'Copy', shortcut: 'Ctrl+C', action: copySelection, disabled: !hasDoc},
       {label: 'Paste', shortcut: 'Ctrl+V', action: pasteClipboard, disabled: !clipboardRef.current},
       {label: 'Clear', shortcut: 'Del', action: clearSelectionContent, disabled: !hasDoc},
-      {label: 'Fill', action: fillSelection, disabled: !hasDoc}
+      {label: 'Fill', action: fillSelection, disabled: !hasDoc},
+      {
+        label: 'Stroke Selection…',
+        action: () => {
+          if (!hasDoc || !selection) return;
+          const canvas = getPaintTarget();
+          if (!canvas) return;
+          const widthInput = window.prompt('Stroke width (px)', '3');
+          if (widthInput === null) return;
+          const strokeWidth = Number(widthInput);
+          if (!Number.isFinite(strokeWidth) || strokeWidth <= 0) return;
+          const locationInput = (window.prompt('Location: inside / center / outside', 'center') ?? 'center').trim().toLowerCase();
+          const location = locationInput === 'inside' || locationInput === 'outside' ? locationInput : 'center';
+          pushHistory('Stroke Selection');
+          strokeSelectionArea(canvas, selection, strokeWidth, fg, location as 'inside' | 'center' | 'outside', fgAlpha / 100);
+          paint();
+        },
+        disabled: !hasDoc || !selection
+      }
     ],
     image: [
       {
@@ -1661,6 +2682,12 @@ export default function PhotoEditor() {
         disabled: !hasDoc
       },
       {
+        label: 'Crop to Selection',
+        shortcut: 'F5',
+        action: () => applyCrop(selection ?? undefined),
+        disabled: !hasDoc || !selection
+      },
+      {
         label: 'Flatten Image',
         action: () => {
           if (!hasDoc || layers.length < 2) return;
@@ -1699,12 +2726,14 @@ export default function PhotoEditor() {
       },
       {
         label: 'Flip Horizontal',
-        action: () => applyFilterToActiveLayer('Flip Horizontal', c => flipCanvas(c, true)),
+        shortcut: 'F7',
+        action: () => flipActiveLayer(true),
         disabled: !hasDoc || activeLayer?.kind !== 'raster'
       },
       {
         label: 'Flip Vertical',
-        action: () => applyFilterToActiveLayer('Flip Vertical', c => flipCanvas(c, false)),
+        shortcut: 'F8',
+        action: () => flipActiveLayer(false),
         disabled: !hasDoc || activeLayer?.kind !== 'raster'
       },
       {
@@ -1719,12 +2748,18 @@ export default function PhotoEditor() {
       }
     ],
     layer: [
-      {label: 'New Layer', action: () => addLayer(), disabled: !hasDoc},
+      {label: 'New Layer', shortcut: 'F3', action: () => addLayer(), disabled: !hasDoc},
+      {label: 'Copy Layer Style', shortcut: 'Shift+F2', action: () => copyLayerStyle(), disabled: !activeLayer || activeLayer.kind === 'adjustment'},
+      {label: 'Paste Layer Style', shortcut: 'F2', action: () => pasteLayerStyle(), disabled: !activeLayer || activeLayer.kind === 'adjustment' || !layerStyleClipboardRef.current},
       {label: 'New Adjustment Layer', action: addAdjustmentLayer, disabled: !hasDoc},
       {label: 'New Hue/Saturation Layer', action: addHueSaturationLayer, disabled: !hasDoc},
       {label: 'New Levels Layer', action: addLevelsLayer, disabled: !hasDoc},
-      {label: 'Duplicate Layer', action: () => duplicateLayer(), disabled: !hasDoc},
-      {label: 'Delete Layer', action: () => deleteLayer(), disabled: !hasDoc || layers.length <= 1},
+      {label: 'Duplicate Layer', shortcut: 'Ctrl+J', action: () => duplicateLayer(), disabled: !hasDoc},
+      {label: activeLayer?.locked ? 'Unlock Layer' : 'Lock Layer', action: () => toggleLock(), disabled: !activeLayer},
+      {label: 'Bring to Front', action: () => setLayerEdge('front'), disabled: !activeLayer},
+      {label: 'Send to Back', action: () => setLayerEdge('back'), disabled: !activeLayer},
+      {label: 'Rasterize Text', action: () => rasterizeText(), disabled: activeLayer?.kind !== 'text'},
+      {label: 'Delete Layer', shortcut: 'F4', action: () => deleteLayer(), disabled: !hasDoc || layers.length <= 1},
       {label: 'Merge Down', action: mergeDown, disabled: !hasDoc},
       {label: 'Add Layer Mask', action: addMask, disabled: !activeLayer || activeLayer.kind !== 'raster' || activeLayer.hasMask},
       {label: 'Delete Layer Mask', action: deleteMask, disabled: !activeLayer?.hasMask}
@@ -1735,8 +2770,45 @@ export default function PhotoEditor() {
       {label: 'Inverse', shortcut: 'Ctrl+Shift+I', action: invertSelection, disabled: !selection}
     ],
     view: [
-      {label: 'Zoom In', shortcut: 'Ctrl++', action: () => setZoom(z => Math.min(MAX_ZOOM, z * 1.25))},
-      {label: 'Zoom Out', shortcut: 'Ctrl+-', action: () => setZoom(z => Math.max(MIN_ZOOM, z / 1.25))},
+      {label: `${showRulers ? '✓ ' : ''}Show Rulers`, shortcut: 'Ctrl+R', action: () => setShowRulers(value => !value)},
+      {label: `${showGrid ? '✓ ' : ''}Show Grid`, shortcut: "Ctrl+'", action: () => setShowGrid(value => !value)},
+      {label: `${snapEnabled ? '✓ ' : ''}Snap`, action: () => setSnapEnabled(value => !value)},
+      {
+        label: 'Grid Size…',
+        action: () => {
+          const value = Number(window.prompt('Grid size in pixels (5–500)', String(gridSize)));
+          if (Number.isFinite(value) && value >= 5 && value <= 500) setGridSize(Math.round(value));
+          else if (!Number.isNaN(value)) setStatus('Grid size must be 5–500 px');
+        }
+      },
+      {
+        label: 'New Guide…',
+        action: () => {
+          const orientationInput = window.prompt('Orientation: H (horizontal) or V (vertical)', 'V');
+          if (!orientationInput) return;
+          const orientation = orientationInput.trim().toLowerCase();
+          if (orientation !== 'h' && orientation !== 'horizontal' && orientation !== 'v' && orientation !== 'vertical') {
+            setStatus('Guide orientation must be H or V');
+            return;
+          }
+          const position = Number(window.prompt('Guide position in pixels', '0'));
+          const horizontal = orientation.startsWith('h');
+          const maximum = horizontal ? height : width;
+          if (!Number.isFinite(position) || position < 0 || position > maximum) {
+            setStatus(`Guide position must be 0–${maximum}px`);
+            return;
+          }
+          setGuides(prev => [...prev, {
+            id: `guide-${Date.now()}-${prev.length}`,
+            orientation: horizontal ? 'horizontal' : 'vertical',
+            position
+          }]);
+        },
+        disabled: !hasDoc
+      },
+      {label: 'Clear Guides', action: () => setGuides([]), disabled: guides.length === 0},
+      {label: 'Zoom In', shortcut: 'Ctrl++', action: () => setZoom(z => stepZoomLevel(z, 1))},
+      {label: 'Zoom Out', shortcut: 'Ctrl+-', action: () => setZoom(z => stepZoomLevel(z, -1))},
       {
         label: '100%',
         shortcut: 'Ctrl+0',
@@ -1765,7 +2837,7 @@ export default function PhotoEditor() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif"
+        accept=".kphoto,application/x-kaisa-photo,image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif"
         hidden
         onChange={e => {
           void openFiles(e.target.files);
@@ -1780,9 +2852,33 @@ export default function PhotoEditor() {
         onOpenChange={setMenuOpen}
       />
 
+      <div className="photo-doctabs" onClick={e => e.stopPropagation()}>
+        {docTabs.map(t => (
+          <div
+            key={t.id}
+            className={`photo-doctabs__tab${t.id === activeDocIdRef.current ? ' is-active' : ''}`}
+            onClick={() => switchToDocument(t.id)}
+            title={t.name}
+          >
+            <span className="photo-doctabs__name">{t.name}{t.dirty ? ' *' : ''}</span>
+            <button
+              type="button"
+              className="photo-doctabs__close"
+              title="Close"
+              onClick={e => {
+                e.stopPropagation();
+                closeDocument(t.id);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
       <PhotoOptionsBar>
         <span className="photo-options__tool">{tool.toUpperCase()}</span>
-        {(tool === 'brush' || tool === 'eraser' || tool === 'clone') && (
+        {(tool === 'brush' || tool === 'eraser' || tool === 'clone' || tool === 'blurTool' || tool === 'sharpenTool' || tool === 'dodge' || tool === 'burn') && (
           <>
             <label className="photo-options__field">
               Size
@@ -1800,11 +2896,19 @@ export default function PhotoEditor() {
               />
               <span>{brushHardness}%</span>
             </label>
-            <label className="photo-options__field">
-              Opacity
-              <input type="range" min={1} max={100} value={brushOpacity} onChange={e => setBrushOpacity(Number(e.target.value))} />
-              <span>{brushOpacity}%</span>
-            </label>
+            {tool === 'blurTool' || tool === 'sharpenTool' || tool === 'dodge' || tool === 'burn' ? (
+              <label className="photo-options__field">
+                {tool === 'dodge' || tool === 'burn' ? 'Exposure' : 'Strength'}
+                <input type="range" min={1} max={100} value={retouchStrength} onChange={e => setRetouchStrength(Number(e.target.value))} />
+                <span>{retouchStrength}%</span>
+              </label>
+            ) : (
+              <label className="photo-options__field">
+                Opacity
+                <input type="range" min={1} max={100} value={brushOpacity} onChange={e => setBrushOpacity(Number(e.target.value))} />
+                <span>{brushOpacity}%</span>
+              </label>
+            )}
           </>
         )}
         {tool === 'shape' && (
@@ -1825,6 +2929,20 @@ export default function PhotoEditor() {
               <input type="range" min={1} max={50} value={shapeStrokeWidth} onChange={e => setShapeStrokeWidth(Number(e.target.value))} />
               <span>{shapeStrokeWidth}px</span>
             </label>}
+          </>
+        )}
+        {tool === 'pen' && (
+          <>
+            <label className="photo-options__field">Mode
+              <select className="photo-options__select" value={shapeStyle} onChange={e => setShapeStyle(e.target.value as ShapeStyle)}>
+                <option value="fill">Fill</option><option value="stroke">Stroke</option><option value="both">Both</option>
+              </select>
+            </label>
+            {shapeStyle !== 'fill' && <label className="photo-options__field">Stroke
+              <input type="range" min={1} max={50} value={shapeStrokeWidth} onChange={e => setShapeStrokeWidth(Number(e.target.value))} />
+              <span>{shapeStrokeWidth}px</span>
+            </label>}
+            {penPath && <span className="photo-options__badge">{penPath.length} point{penPath.length === 1 ? '' : 's'}</span>}
           </>
         )}
         {(tool === 'text' || activeLayer?.kind === 'text') && (
@@ -1878,6 +2996,49 @@ export default function PhotoEditor() {
                   const color = e.target.value;
                   if (activeLayer?.kind === 'text') updateTextLayer(activeLayer.id, {color});
                   setFg(color);
+                }} />
+            </label>
+            <label className="photo-options__field">Tracking
+              <input className="photo-options__number" type="number" min={-10} max={50}
+                value={activeLayer?.text?.tracking ?? textTracking}
+                onFocus={() => activeLayer?.kind === 'text' && pushHistory('Text Tracking')}
+                onChange={e => {
+                  const tracking = Math.max(-10, Math.min(50, Number(e.target.value) || 0));
+                  if (activeLayer?.kind === 'text') updateTextLayer(activeLayer.id, {tracking});
+                  setTextTracking(tracking);
+                }} />
+            </label>
+            <label className="photo-options__field">Line
+              <input className="photo-options__number" type="number" min={0.5} max={3} step={0.1}
+                value={activeLayer?.text?.lineHeight ?? textLineHeight}
+                onFocus={() => activeLayer?.kind === 'text' && pushHistory('Text Line Height')}
+                onChange={e => {
+                  const lineHeight = Math.max(.5, Math.min(3, Number(e.target.value) || 1.2));
+                  if (activeLayer?.kind === 'text') updateTextLayer(activeLayer.id, {lineHeight});
+                  setTextLineHeight(lineHeight);
+                }} />
+            </label>
+            <button type="button" title="Underline"
+              className={(activeLayer?.text?.underline ?? textUnderline) ? 'is-active' : ''}
+              onClick={() => {
+                const underline = !(activeLayer?.text?.underline ?? textUnderline);
+                if (activeLayer?.kind === 'text') { pushHistory('Text Underline'); updateTextLayer(activeLayer.id, {underline}); }
+                setTextUnderline(underline);
+              }}><u>U</u></button>
+            <label className="photo-options__field">Outline
+              <input className="photo-options__number" type="number" min={0} max={20}
+                value={activeLayer?.text?.strokeWidth ?? textStrokeWidth}
+                onFocus={() => activeLayer?.kind === 'text' && pushHistory('Text Outline')}
+                onChange={e => {
+                  const strokeWidth = Math.max(0, Math.min(20, Number(e.target.value) || 0));
+                  if (activeLayer?.kind === 'text') updateTextLayer(activeLayer.id, {strokeWidth});
+                  setTextStrokeWidth(strokeWidth);
+                }} />
+              <input type="color" value={activeLayer?.text?.strokeColor ?? textStrokeColor}
+                onFocus={() => activeLayer?.kind === 'text' && pushHistory('Text Outline Color')}
+                onChange={e => {
+                  if (activeLayer?.kind === 'text') updateTextLayer(activeLayer.id, {strokeColor: e.target.value});
+                  setTextStrokeColor(e.target.value);
                 }} />
             </label>
           </>
@@ -2030,7 +3191,36 @@ export default function PhotoEditor() {
             </>
           )
         ) : null}
-        {activeLayer && activeLayer.kind !== 'adjustment' ? (
+        {tool === 'zoom' && (
+          <label className="photo-options__field">
+            Zoom
+            <input
+              type="number"
+              min={10}
+              max={2000}
+              value={zoomInputDraft ?? String(Math.round(zoom * 100))}
+              disabled={!hasDoc}
+              onFocus={e => {
+                setZoomInputDraft(String(Math.round(zoom * 100)));
+                e.target.select();
+              }}
+              onChange={e => setZoomInputDraft(e.target.value)}
+              onBlur={e => commitZoomInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setZoomInputDraft(null);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
+            %
+          </label>
+        )}
+        {activeLayer && activeLayer.kind !== 'adjustment' && tool !== 'zoom' ? (
           <>
             <label className="photo-options__field">
               Blend
@@ -2075,15 +3265,23 @@ export default function PhotoEditor() {
           onSelect={selected => (selected === 'transform' ? beginTransform() : setTool(selected))}
           foreground={fg}
           background={bg}
+          foregroundAlpha={fgAlpha}
+          backgroundAlpha={bgAlpha}
           onForegroundChange={setFg}
           onBackgroundChange={setBg}
+          onForegroundAlphaChange={setFgAlpha}
+          onBackgroundAlphaChange={setBgAlpha}
           onSwapColors={() => {
             setFg(bg);
             setBg(fg);
+            setFgAlpha(bgAlpha);
+            setBgAlpha(fgAlpha);
           }}
           onResetColors={() => {
             setFg(DEFAULT_FG);
             setBg(DEFAULT_BG);
+            setFgAlpha(100);
+            setBgAlpha(100);
           }}
           shapeMode={shapeMode}
           onShapeModeChange={setShapeMode}
@@ -2093,10 +3291,15 @@ export default function PhotoEditor() {
           ref={viewportRef}
           className="photo-viewport"
           data-tool={tool}
+          data-zoom-out={tool === 'zoom' && altPressed ? '' : undefined}
+          data-filling={isFilling ? '' : undefined}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
+          onDoubleClick={() => {
+            if (tool === 'pen' && penPath) finishPenPath(false);
+          }}
           onContextMenu={onContextMenu}
           onWheel={e => {
             if (!hasDoc) return;
@@ -2213,7 +3416,23 @@ export default function PhotoEditor() {
                 {[...layers].reverse().map(layer => (
                   <li
                     key={layer.id}
-                    className={`photo-layer${layer.id === activeLayerId ? ' is-active' : ''}${layer.kind === 'adjustment' ? ' is-adj' : ''}${layer.kind === 'text' ? ' is-text' : ''}`}
+                    className={`photo-layer${layer.id === activeLayerId ? ' is-active' : ''}${layer.kind === 'adjustment' ? ' is-adj' : ''}${layer.kind === 'text' ? ' is-text' : ''}${dragLayerId === layer.id ? ' is-dragging' : ''}`}
+                    draggable={renameId !== layer.id}
+                    onDragStart={e => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDragLayerId(layer.id);
+                    }}
+                    onDragOver={e => {
+                      if (dragLayerId && dragLayerId !== layer.id) e.preventDefault();
+                    }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (!dragLayerId || dragLayerId === layer.id) return;
+                      pushHistory('Reorder Layers');
+                      setLayers(prev => moveLayerBeside(prev, dragLayerId, layer.id));
+                      setDragLayerId(null);
+                    }}
+                    onDragEnd={() => setDragLayerId(null)}
                     onClick={() => {
                       setActiveLayerId(layer.id);
                       setEditTarget('layer');
@@ -2244,6 +3463,14 @@ export default function PhotoEditor() {
                       {layer.visible ? '●' : '○'}
                     </button>
                     <div className="photo-layer__main">
+                      <LayerThumb
+                        layer={layer}
+                        buffers={buffersRef.current}
+                        masks={masksRef.current}
+                        docWidth={width}
+                        docHeight={height}
+                        version={historyTick}
+                      />
                       {renameId === layer.id ? (
                         <input
                           className="photo-layer__rename"
@@ -2265,7 +3492,12 @@ export default function PhotoEditor() {
                       ) : (
                         <span className="photo-layer__name">
                           {layer.kind === 'adjustment' ? '◆ ' : ''}
-                          {layer.kind === 'text' ? `T  ${layer.text?.content.split('\n')[0] || layer.name}` : layer.name}
+                          {layer.kind === 'text' ? (
+                            <>
+                              <span className="photo-layer__type-icon">T</span>
+                              {layer.text?.content.split('\n')[0] || layer.name}
+                            </>
+                          ) : layer.name}
                         </span>
                       )}
                       <span className="photo-layer__opacity">{Math.round(layer.opacity * 100)}%</span>
@@ -2290,6 +3522,16 @@ export default function PhotoEditor() {
                   </li>
                 ))}
               </ul>
+              {activeLayer && activeLayer.kind !== 'adjustment' ? (
+                <PhotoLayerStylePanel
+                  style={activeLayer.style ?? DEFAULT_LAYER_STYLE}
+                  canPaste={Boolean(layerStyleClipboardRef.current)}
+                  onBeginChange={pushHistory}
+                  onChange={updateActiveLayerStyle}
+                  onCopy={() => copyLayerStyle()}
+                  onPaste={() => pasteLayerStyle()}
+                />
+              ) : null}
             </div>
           ) : (
             <div className="photo-panel">
@@ -2318,7 +3560,34 @@ export default function PhotoEditor() {
         <span>
           {cursor.x}, {cursor.y}px
         </span>
-        <span>{Math.round(zoom * 100)}%</span>
+        {tool !== 'zoom' && (
+          <label className="photo-statusbar__zoom">
+            <input
+              type="number"
+              min={10}
+              max={2000}
+              value={zoomInputDraft ?? String(Math.round(zoom * 100))}
+              disabled={!hasDoc}
+              onFocus={e => {
+                setZoomInputDraft(String(Math.round(zoom * 100)));
+                e.target.select();
+              }}
+              onChange={e => setZoomInputDraft(e.target.value)}
+              onBlur={e => commitZoomInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setZoomInputDraft(null);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
+            %
+          </label>
+        )}
         <span>{status}</span>
         {selection ? (
           <span>
@@ -2343,6 +3612,15 @@ export default function PhotoEditor() {
                   }
                 },
                 {label: 'Duplicate Layer', action: () => duplicateLayer(contextMenu.layerId)},
+                {label: 'Copy Layer Style', action: () => copyLayerStyle(contextMenu.layerId)},
+                {label: 'Paste Layer Style', action: () => pasteLayerStyle(contextMenu.layerId)},
+                {
+                  label: layers.find(layer => layer.id === contextMenu.layerId)?.locked ? 'Unlock Layer' : 'Lock Layer',
+                  action: () => toggleLock(contextMenu.layerId)
+                },
+                {label: 'Bring to Front', action: () => setLayerEdge('front', contextMenu.layerId)},
+                {label: 'Send to Back', action: () => setLayerEdge('back', contextMenu.layerId)},
+                {label: 'Rasterize Text', action: () => rasterizeText(contextMenu.layerId)},
                 {label: 'Delete Layer', action: () => deleteLayer(contextMenu.layerId)},
                 {label: 'Add Layer Mask', action: addMask},
                 {label: 'Delete Layer Mask', action: deleteMask},

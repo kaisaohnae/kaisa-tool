@@ -1,6 +1,8 @@
 import {createLayerCanvas} from './canvas';
 import {hexToRgba} from './color';
-import type {ShapeMode, ShapeStyle} from './types';
+import {withSelectionClip} from './selection';
+import type {PenAnchor, ShapeMode, ShapeStyle} from './types';
+import type {PhotoSelection} from './types';
 
 export function drawBrushStroke(
   ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number,
@@ -9,7 +11,11 @@ export function drawBrushStroke(
   const radius = Math.max(0.5, size / 2);
   const distance = Math.hypot(toX - fromX, toY - fromY);
   const count = Math.max(1, Math.ceil(distance / Math.max(radius * 0.25, 1)));
-  const inner = radius * Math.max(0, Math.min(100, hardness)) / 100;
+  // Clamped strictly below `radius`: at hardness=100 (the default) inner === radius would make
+  // createRadialGradient's two circles coincide exactly, which Chromium rasterizes as an empty
+  // gradient - the whole stamp silently paints nothing. Keeping a hair of falloff avoids that
+  // degenerate case while staying visually indistinguishable from a true hard edge.
+  const inner = Math.min(radius - 0.01, radius * Math.max(0, Math.min(100, hardness)) / 100);
   const [r, g, b] = hexToRgba(color);
   ctx.save();
   ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
@@ -46,7 +52,10 @@ export function drawCloneStroke(
     const y = fromY + (toY - fromY) * t;
     stampCtx.clearRect(0, 0, stamp.width, stamp.height);
     stampCtx.drawImage(sourceCanvas, x + offsetX - radius, y + offsetY - radius, radius * 2, radius * 2, 0, 0, radius * 2, radius * 2);
-    const mask = destCtx.createRadialGradient(x, y, radius * hardness / 100, x, y, radius);
+    // Same degenerate-gradient guard as drawBrushStroke: keep the inner radius strictly below
+    // the outer one so a hardness of 100 (the default) doesn't silently paint nothing.
+    const innerRadius = Math.min(radius - 0.01, radius * hardness / 100);
+    const mask = destCtx.createRadialGradient(x, y, innerRadius, x, y, radius);
     mask.addColorStop(0, 'rgb(0 0 0)');
     mask.addColorStop(1, 'transparent');
     destCtx.save();
@@ -61,27 +70,45 @@ export function drawCloneStroke(
   }
 }
 
-export function drawLinearGradient(canvas: HTMLCanvasElement, x1: number, y1: number, x2: number, y2: number, colorA: string, colorB: string) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-  gradient.addColorStop(0, colorA); gradient.addColorStop(1, colorB);
-  ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+export function drawLinearGradient(
+  canvas: HTMLCanvasElement, x1: number, y1: number, x2: number, y2: number, colorA: string, colorB: string,
+  sel?: PhotoSelection | null, mask?: HTMLCanvasElement | null, alphaA = 1, alphaB = 1
+) {
+  withSelectionClip(canvas, sel ?? null, mask, ctx => {
+    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+    const [ra, ga, ba] = hexToRgba(colorA);
+    const [rb, gb, bb] = hexToRgba(colorB);
+    gradient.addColorStop(0, `rgba(${ra}, ${ga}, ${ba}, ${Math.max(0, Math.min(1, alphaA))})`);
+    gradient.addColorStop(1, `rgba(${rb}, ${gb}, ${bb}, ${Math.max(0, Math.min(1, alphaB))})`);
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
 }
 
-export function floodFill(canvas: HTMLCanvasElement, startX: number, startY: number, fillHex: string, tolerance = 24) {
+export function floodFill(
+  canvas: HTMLCanvasElement, startX: number, startY: number, fillHex: string, tolerance = 24,
+  mask?: HTMLCanvasElement | null, alpha = 255
+) {
   const ctx = canvas.getContext('2d', {willReadFrequently: true});
   if (!ctx) return;
   const {width, height} = canvas, x0 = Math.floor(startX), y0 = Math.floor(startY);
   if (x0 < 0 || y0 < 0 || x0 >= width || y0 >= height) return;
+  // When a selection is active, stay inside it: pixels outside the mask are never filled,
+  // and clicking outside the selection does nothing (matches Photoshop's bucket-fill behavior).
+  let maskData: Uint8ClampedArray | null = null;
+  if (mask) {
+    const maskCtx = mask.getContext('2d', {willReadFrequently: true});
+    maskData = maskCtx ? maskCtx.getImageData(0, 0, width, height).data : null;
+    if (maskData && maskData[(y0 * width + x0) * 4 + 3] < 8) return;
+  }
   const image = ctx.getImageData(0, 0, width, height), data = image.data, start = (y0 * width + x0) * 4;
   const target = [data[start], data[start + 1], data[start + 2], data[start + 3]];
-  const fill = hexToRgba(fillHex);
+  const fill = hexToRgba(fillHex, alpha);
   const seen = new Uint8Array(width * height), stack = [x0, y0];
   const matches = (i: number) => target.every((v, c) => Math.abs(data[i + c] - v) <= tolerance);
+  const inMask = (p: number) => !maskData || maskData[p * 4 + 3] >= 8;
   while (stack.length) {
     const y = stack.pop()!, x = stack.pop()!, p = y * width + x, i = p * 4;
-    if (x < 0 || y < 0 || x >= width || y >= height || seen[p] || !matches(i)) continue;
+    if (x < 0 || y < 0 || x >= width || y >= height || seen[p] || !matches(i) || !inMask(p)) continue;
     seen[p] = 1; data.set(fill, i);
     stack.push(x - 1, y, x + 1, y, x, y - 1, x, y + 1);
   }
@@ -104,16 +131,48 @@ export function fillRect(canvas: HTMLCanvasElement, x: number, y: number, w: num
   ctx.fillStyle = color; ctx.fillRect(x, y, w, h);
 }
 
+// Traces a pen path (straight segments where an anchor has no handle, cubic bezier curves where
+// it does) onto an already-open canvas path. Each anchor's `handle` is the absolute position of
+// its forward curve handle; the backward handle used by the segment behind it is that point
+// mirrored through the anchor, so a single dragged handle makes a smooth curve on both sides.
+export function tracePenPath(ctx: CanvasRenderingContext2D, anchors: PenAnchor[], closed: boolean) {
+  if (!anchors.length) return;
+  ctx.moveTo(anchors[0].x, anchors[0].y);
+  const segments = closed ? anchors.length : anchors.length - 1;
+  for (let i = 0; i < segments; i++) {
+    const a = anchors[i];
+    const b = anchors[(i + 1) % anchors.length];
+    const c1 = a.handle ?? {x: a.x, y: a.y};
+    const c2 = b.handle ? {x: b.x * 2 - b.handle.x, y: b.y * 2 - b.handle.y} : {x: b.x, y: b.y};
+    ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
+  }
+  if (closed) ctx.closePath();
+}
+
+export function drawVectorPath(
+  canvas: HTMLCanvasElement, anchors: PenAnchor[], closed: boolean,
+  style: ShapeStyle, fill: string, stroke: string, strokeWidth: number,
+  sel?: PhotoSelection | null, mask?: HTMLCanvasElement | null, fillAlpha = 1, strokeAlpha = 1
+) {
+  if (anchors.length < 2) return;
+  withSelectionClip(canvas, sel ?? null, mask, ctx => {
+    ctx.beginPath();
+    tracePenPath(ctx, anchors, closed);
+    if (style !== 'stroke') { ctx.globalAlpha = fillAlpha; ctx.fillStyle = fill; ctx.fill(); ctx.globalAlpha = 1; }
+    if (style !== 'fill') { ctx.globalAlpha = strokeAlpha; ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, strokeWidth); ctx.stroke(); ctx.globalAlpha = 1; }
+  });
+}
+
 export function drawShape(
   canvas: HTMLCanvasElement, x: number, y: number, w: number, h: number, mode: ShapeMode,
-  style: ShapeStyle, fill: string, stroke: string, strokeWidth: number
+  style: ShapeStyle, fill: string, stroke: string, strokeWidth: number, fillAlpha = 1, strokeAlpha = 1
 ) {
   const ctx = canvas.getContext('2d'); if (!ctx) return;
   ctx.save(); ctx.beginPath();
   if (mode === 'ellipse') ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
   else if (mode === 'rounded') ctx.roundRect(x, y, w, h, Math.min(24, Math.abs(w) / 4, Math.abs(h) / 4));
   else ctx.rect(x, y, w, h);
-  if (style !== 'stroke') { ctx.fillStyle = fill; ctx.fill(); }
-  if (style !== 'fill') { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, strokeWidth); ctx.stroke(); }
+  if (style !== 'stroke') { ctx.globalAlpha = fillAlpha; ctx.fillStyle = fill; ctx.fill(); ctx.globalAlpha = 1; }
+  if (style !== 'fill') { ctx.globalAlpha = strokeAlpha; ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, strokeWidth); ctx.stroke(); ctx.globalAlpha = 1; }
   ctx.restore();
 }
