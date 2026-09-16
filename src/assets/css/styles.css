@@ -220,7 +220,7 @@ body.scrolled #header {
 
 .menu__list {
   display: flex;
-  gap: clamp(16px, 3vw, 40px);
+  gap: clamp(11px, calc(3vw - 5px), 35px);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1971,15 +1971,36 @@ body.scrolled #header {
 
 
 .menu__item .menu__link.menu__link--photo {
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  background: #000;
+  justify-content: center;
+  min-width: 68px;
+  height: 24px;
+  gap: 5px;
+  padding: 0 10px;
+  line-height: 1;
+  border-radius: 100px;
+  background: #666;
   color: #fff;
   transition: background-color 0.2s;
 }
 .menu__item .menu__link.menu__link--photo:hover { background: #333; color: #fff; }
 .menu__item .menu__link.menu__link--photo::after { display: none; }
-.menu__link--photo svg { flex-shrink: 0; }
+.menu__link--photo svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.menu--desktop .menu__list { align-items: center; }
+
+.menu--desktop .menu__list { gap: clamp(16px, 2.5vw, 28px); }
+
+.menu__link--photo > svg,
+.menu__link--photo > span {
+  transform: translateY(-1px);
+}
+
+.menu__link:not(.menu__link--photo) > span {
+  display: inline-block;
+  transform: translateY(-1px);
+}

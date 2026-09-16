@@ -8,12 +8,12 @@ import ThemeToggle from '@/components/layout/theme-toggle';
 import {useT} from '@/i18n/locale-context';
 
 const MENU_ITEMS = [
-  {href: '/photo', label: 'Photo', match: '/photo'},
   {href: '/image/compress/', label: 'Image', match: '/image'},
   {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
   {href: '/format/json/', label: 'FORMAT', match: '/format'},
   {href: '/edit/compare/', label: 'EDIT', match: '/edit'},
-  {href: '/util/password/', label: 'UTIL', match: '/util'}
+  {href: '/util/password/', label: 'UTIL', match: '/util'},
+  {href: '/photo', label: 'Photo', match: '/photo'}
 ];
 
 export default function Header() {
@@ -60,7 +60,7 @@ export default function Header() {
               <circle cx="12" cy="12" r="3" />
             </svg>
           )}
-          {t(item.label)}
+          <span>{t(item.label)}</span>
         </Link>
       </li>
     );
