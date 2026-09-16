@@ -1969,3 +1969,17 @@ body.scrolled #header {
   pointer-events: none;
 }
 
+
+.menu__item .menu__link.menu__link--photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #000;
+  color: #fff;
+  transition: background-color 0.2s;
+}
+.menu__item .menu__link.menu__link--photo:hover { background: #333; color: #fff; }
+.menu__item .menu__link.menu__link--photo::after { display: none; }
+.menu__link--photo svg { flex-shrink: 0; }
