@@ -4,8 +4,8 @@
  */
 
 export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', string>>> = {
-  "Image Editor": {
-    ko: "이미지 편집",
+  "Photo": {
+    ko: "사진",
     zh: "图片编辑",
     hi: "छवि संपादक"
   },

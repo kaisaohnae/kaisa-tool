@@ -8,7 +8,7 @@ import ThemeToggle from '@/components/layout/theme-toggle';
 import {useT} from '@/i18n/locale-context';
 
 const MENU_ITEMS = [
-  {href: '/photo', label: 'Image Editor', match: '/photo', newWindow: true},
+  {href: '/photo', label: 'Photo', match: '/photo'},
   {href: '/image/compress/', label: 'Image', match: '/image'},
   {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
   {href: '/format/json/', label: 'FORMAT', match: '/format'},
@@ -53,7 +53,7 @@ export default function Header() {
     const isActive = pathname === item.match || pathname.startsWith(`${item.match}/`);
     return (
       <li key={item.href} className={isActive ? 'menu__item menu__item--active' : 'menu__item'}>
-        <Link href={item.href} className="menu__link" target={'newWindow' in item ? '_blank' : undefined} rel={'newWindow' in item ? 'noopener noreferrer' : undefined} aria-current={isActive ? 'page' : undefined}>
+        <Link href={item.href} className="menu__link" aria-current={isActive ? 'page' : undefined}>
           {t(item.label)}
         </Link>
       </li>

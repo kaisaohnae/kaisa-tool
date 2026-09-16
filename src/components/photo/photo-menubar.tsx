@@ -1,3 +1,5 @@
+import IconLogo from '@/components/icons/icon-logo';
+
 export type PhotoMenuKey = 'file' | 'edit' | 'image' | 'filter' | 'layer' | 'select' | 'view';
 export type PhotoMenuItem = {label: string; shortcut?: string; action: () => void; disabled?: boolean};
 
@@ -12,6 +14,9 @@ export function PhotoMenubar({open, items, documentLabel, onOpenChange}: Props) 
   const menus: PhotoMenuKey[] = ['file', 'edit', 'image', 'filter', 'layer', 'select', 'view'];
   return (
     <div className="photo-menubar" onClick={event => event.stopPropagation()}>
+      <a className="photo-menubar__logo" href="https://kaisa.co.kr" aria-label="Kaisa">
+        <IconLogo width={52} height={22} />
+      </a>
       {menus.map(menu => (
         <div key={menu} className={`photo-menubar__item${open === menu ? ' is-open' : ''}`}>
           <button

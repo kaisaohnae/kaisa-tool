@@ -33,7 +33,7 @@ body.photo-mode {
   z-index: 2000;
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: 32px 28px 32px 1fr 22px;
+  grid-template-rows: 42px 28px 32px 1fr 22px;
   width: 100%;
   min-width: 1000px;
   height: 100vh;
@@ -1031,3 +1031,25 @@ body.photo-mode {
 .photo-context { box-sizing: border-box; min-width: min(180px, calc(100vw - 16px)); overflow: auto; overscroll-behavior: contain; border-radius: 7px; }
 .photo-context__item { overflow-wrap: anywhere; }
 .photo-layer__thumb-target { display: flex; flex-shrink: 0; }
+
+.photo-menubar__logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 8px;
+  margin-right: 4px;
+}
+.photo-menubar__logo svg { display: block; }
+.photo-menubar__logo:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: -2px; }
+
+.photo-menubar__logo svg path[fill='#000'] {
+  fill: #b0b0b0;
+}
+
+.photo-menubar__btn {
+  padding-top: 10px;
+}
+
+.photo-menubar__doc {
+  padding-top: 10px;
+}
