@@ -20,6 +20,7 @@ function add(en, ko, zh, hi) {
 }
 
 // ——— Categories ———
+add('Image Editor', '이미지 편집', '图片编辑', 'छवि संपादक');
 add('Image', '이미지', '图片', 'छवि');
 add('PDF', 'PDF', 'PDF', 'PDF');
 add('FORMAT', 'FORMAT', 'FORMAT', 'FORMAT');
