@@ -1,4 +1,4 @@
 User-Agent: *
 Allow: /
 
-Sitemap: https://tool.kaisa.co.kr/sitemap.xml
+Sitemap: http://localhost:5553/sitemap.xml
