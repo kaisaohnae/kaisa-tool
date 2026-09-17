@@ -1,3 +1,4 @@
+import {KAISA_HOME_URL} from '@/config/kaisa-navigation';
 import IconLogo from '@/components/icons/icon-logo';
 
 export type PhotoMenuKey = 'file' | 'edit' | 'image' | 'filter' | 'layer' | 'select' | 'view';
@@ -14,7 +15,7 @@ export function PhotoMenubar({open, items, documentLabel, onOpenChange}: Props) 
   const menus: PhotoMenuKey[] = ['file', 'edit', 'image', 'filter', 'layer', 'select', 'view'];
   return (
     <div className="photo-menubar" onClick={event => event.stopPropagation()}>
-      <a className="photo-menubar__logo" href="https://kaisa.co.kr" aria-label="Kaisa">
+      <a className="photo-menubar__logo" href={KAISA_HOME_URL} aria-label="Kaisa">
         <IconLogo width={52} height={22} />
       </a>
       {menus.map(menu => (

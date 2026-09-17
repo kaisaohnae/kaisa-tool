@@ -4,6 +4,25 @@
  */
 
 export const dictionary: Record<string, Partial<Record<'ko' | 'zh' | 'hi', string>>> = {
+  "Nickname": {"ko":"닉네임","zh":"昵称","hi":"उपनाम"},
+  "Delete this account? This cannot be undone.": {"ko":"탈퇴하면 회원 정보가 즉시 삭제되며 되돌릴 수 없습니다. 계속할까요?","zh":"注销后账号信息将立即删除且无法恢复。要继续吗？","hi":"खाता हटाने पर जानकारी तुरंत मिट जाएगी और वापस नहीं आएगी। जारी रखें?"},
+  "Delete account": {"ko":"회원 탈퇴","zh":"注销账号","hi":"खाता हटाएँ"},
+  "Enter your password to permanently delete this account.": {"ko":"비밀번호를 입력하면 회원 정보가 즉시 삭제됩니다.","zh":"输入密码后将立即删除账号信息。","hi":"पासवर्ड डालते ही खाता जानकारी हमेशा के लिए हट जाएगी।"},
+  "Failed to submit comment.": {"ko":"댓글 등록에 실패했습니다.","zh":"提交失败。","hi":"टिप्पणी भेजने में विफल।"},
+  "Comments": {"ko":"댓글","zh":"评论","hi":"टिप्पणियाँ"},
+  "Leave a comment": {"ko":"댓글을 남겨 주세요","zh":"留下评论","hi":"टिप्पणी लिखें"},
+  "Writing as {name}": {"ko":"{name}님으로 작성 중","zh":"正在以 {name} 的身份撰写","hi":"{name} के रूप में लिख रहे हैं"},
+  "Submit": {"ko":"등록","zh":"提交","hi":"भेजें"},
+  "Log in to leave a comment.": {"ko":"댓글은 로그인 후 작성할 수 있습니다.","zh":"登录后才能发表评论。","hi":"टिप्पणी के लिए लॉगिन करें।"},
+  "No comments yet. Be the first.": {"ko":"아직 댓글이 없습니다. 첫 댓글을 남겨보세요.","zh":"暂无评论。来写第一条吧。","hi":"अभी कोई टिप्पणी नहीं। पहली लिखें।"},
+  "Reply": {"ko":"답글","zh":"回复","hi":"जवाब"},
+  "Write a reply": {"ko":"답글을 입력해 주세요","zh":"填写回复","hi":"जवाब लिखें"},
+  "Post reply": {"ko":"답글 등록","zh":"提交回复","hi":"जवाब भेजें"},
+  "Works": { ko: "작업" },
+  "Games": { ko: "게임" },
+  "Tools": { ko: "툴" },
+  "Blog": { ko: "블로그" },
+  "Posts": { ko: "포스트" },
   "Photo": {
     ko: "사진",
     zh: "图片编辑",

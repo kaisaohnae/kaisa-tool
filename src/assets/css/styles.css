@@ -2004,3 +2004,131 @@ body.scrolled #header {
   display: inline-block;
   transform: translateY(-1px);
 }
+
+/* Level two stays below the common header; level three lists category tools. */
+.tool-category-nav {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  z-index: 900;
+  height: 48px;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+.tool-category-nav__list {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 10px 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.tool-category-nav__list > li { flex-shrink: 0; }
+.tool-category-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: #e2e2e2;
+  color: #444;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 28px;
+  transition: background-color 0.2s, color 0.2s;
+}
+.tool-category-nav__link:hover { background: #d2d2d2; color: #222; }
+.tool-category-nav__link.is-active { background: #c8c8c8; color: #222; }
+html[data-theme='dark'] .tool-category-nav__link { background: #505054; color: #eee; }
+html[data-theme='dark'] .tool-category-nav__link:hover,
+html[data-theme='dark'] .tool-category-nav__link.is-active { background: #646469; color: #fff; }
+.tool-category-nav__link svg { flex-shrink: 0; }
+.site-main { padding-top: calc(var(--header-height) + 48px); }
+.subnav .subnav__list { padding: 12px 0 8px; }
+.subnav .subnav__link { background: var(--color-bg-elevated); border-radius: 999px; }
+.subnav .subnav__link:hover, .subnav .subnav__link--active { background: var(--color-border); }
+body.photo-mode .tool-category-nav { display: none; }
+.tool-category-nav__link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@media (max-width: 768px) {
+  .tool-category-nav .site-shell { padding-inline: 24px; }
+  .tool-category-nav__list { justify-content: flex-start; }
+}
+
+.tool-category-nav { border: 0; background: transparent; backdrop-filter: none; }
+.tool-category-nav__link,
+.tool-category-nav__link:hover,
+.tool-category-nav__link.is-active,
+html[data-theme='dark'] .tool-category-nav__link,
+html[data-theme='dark'] .tool-category-nav__link:hover,
+html[data-theme='dark'] .tool-category-nav__link.is-active {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text-muted);
+}
+.tool-category-nav__link:hover,
+.tool-category-nav__link.is-active,
+html[data-theme='dark'] .tool-category-nav__link:hover,
+html[data-theme='dark'] .tool-category-nav__link.is-active { color: var(--color-text); }
+.subnav .subnav__link,
+.subnav .subnav__link:hover,
+.subnav .subnav__link--active {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.tool-category-nav {
+  position: static;
+  height: auto;
+  z-index: auto;
+}
+.tool-category-nav__list { justify-content: flex-start; }
+.tool-category-nav__link { font-weight: 700; }
+.site-main { padding-top: var(--header-height); }
+
+.tool-category-nav__link { padding-inline: 0; min-width: 0; }
+.tool-category-nav__list { gap: 8px 24px; }
+.subnav .subnav__list { gap: 4px 20px; }
+.subnav .subnav__link { padding-inline: 0; }
+
+.tool-category-nav { margin-top: 30px; }
+
+.tool-category-nav__link.is-active,
+html[data-theme='dark'] .tool-category-nav__link.is-active,
+.subnav .subnav__link--active {
+  color: var(--color-accent);
+}
+
+.tool-category-nav__link.tool-category-nav__link--photo,
+html[data-theme='dark'] .tool-category-nav__link.tool-category-nav__link--photo {
+  background: #000;
+  color: #fff;
+  border-radius: 999px;
+  padding-inline: 10px;
+  min-width: 68px;
+}
+.tool-category-nav__link.tool-category-nav__link--photo:hover,
+html[data-theme='dark'] .tool-category-nav__link.tool-category-nav__link--photo:hover {
+  background: #333;
+  color: #fff;
+}
+
+.tool-category-nav__link.tool-category-nav__link--photo,
+html[data-theme='dark'] .tool-category-nav__link.tool-category-nav__link--photo {
+  height: 24px;
+  min-height: 24px;
+  min-width: 68px;
+  padding: 0 10px;
+  line-height: 24px;
+  font-size: 13px;
+  font-weight: 400;
+  background: #666;
+}

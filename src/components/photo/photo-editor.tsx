@@ -356,8 +356,13 @@ export default function PhotoEditor() {
     }
     ctx.restore();
 
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, width * zoom, height * zoom);
+    ctx.clip();
     ctx.imageSmoothingEnabled = zoom < 1;
     ctx.drawImage(composed, dx, dy, width * zoom, height * zoom);
+    ctx.restore();
 
     if (showGrid) {
       const spacing = saneGridSpacing(gridSize, zoom);
@@ -398,6 +403,9 @@ export default function PhotoEditor() {
 
     if (transform && transformSourceRef.current) {
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(dx, dy, width * zoom, height * zoom);
+      ctx.clip();
       ctx.translate(dx, dy);
       ctx.scale(zoom, zoom);
       drawTransformedImage(
@@ -571,6 +579,34 @@ export default function PhotoEditor() {
   useEffect(() => {
     document.body.classList.add('photo-mode');
     return () => document.body.classList.remove('photo-mode');
+  }, []);
+
+  const newDocumentRequestRef = useRef(0);
+  const openNewDocument = useCallback(async () => {
+    const request = ++newDocumentRequestRef.current;
+    const saved = loadNewDocumentSettings();
+    let size: {width: number; height: number} | null = null;
+    try {
+      if (navigator.clipboard?.read) {
+        const items = await navigator.clipboard.read();
+        const item = items.find(entry => entry.types.some(type => type.startsWith('image/')));
+        const type = item?.types.find(value => value.startsWith('image/'));
+        if (item && type) {
+          const image = await createImageBitmap(await item.getType(type));
+          size = {width: image.width, height: image.height};
+          image.close();
+        }
+      } else if (clipboardRef.current) {
+        size = clipboardRef.current;
+      }
+    } catch {
+      // Clipboard permission may be unavailable; keep the saved document size.
+    }
+    if (request !== newDocumentRequestRef.current) return;
+    setNewW(Math.max(1, Math.min(8192, size?.width ?? saved.width)));
+    setNewH(Math.max(1, Math.min(8192, size?.height ?? saved.height)));
+    setNewFill(saved.fill);
+    setNewDialog(true);
   }, []);
 
   useEffect(() => {
@@ -1469,7 +1505,7 @@ export default function PhotoEditor() {
 
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        if (!e.repeat) setNewDialog(true);
+        if (!e.repeat) void openNewDocument();
         return;
       }
 
@@ -1790,6 +1826,7 @@ export default function PhotoEditor() {
     duplicateLayer,
     mergeDown,
     mergeSelectedLayers,
+    openNewDocument,
     tool,
     nudgeActiveLayer,
     penPath,
@@ -1831,7 +1868,7 @@ export default function PhotoEditor() {
     {label: string; shortcut?: string; action: () => void; disabled?: boolean}[]
   > = {
     file: [
-      {label: 'New…', shortcut: 'Ctrl+N', action: () => setNewDialog(true)},
+      {label: 'New…', shortcut: 'Ctrl+N', action: () => void openNewDocument()},
       {label: 'Open…', shortcut: 'Ctrl+O', action: () => fileInputRef.current?.click()},
       {label: 'Save Project (.kphoto)', shortcut: 'Ctrl+S', action: () => void saveProject(), disabled: !hasDoc},
       {label: 'Export as PNG', shortcut: 'Ctrl+Shift+S', action: () => void saveAs('image/png'), disabled: !hasDoc},
@@ -2626,7 +2663,7 @@ export default function PhotoEditor() {
             <div className="photo-empty">
               <p>Open an image or create a new document</p>
               <div className="photo-empty__actions">
-                <button type="button" onClick={() => setNewDialog(true)}>
+                <button type="button" onClick={() => void openNewDocument()}>
                   New
                 </button>
                 <button type="button" onClick={() => fileInputRef.current?.click()}>

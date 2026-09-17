@@ -1,9 +1,12 @@
+import {LOCALE_BOOTSTRAP_SCRIPT} from '@/i18n/locale-cookie';
 import type {Metadata} from 'next';
 import {Syne, DM_Sans} from 'next/font/google';
 import '@/assets/css/reset.css';
 import '@/assets/css/styles.css';
 import '@/ui-kit/kit.css';
+import '@/components/layout/kaisa-layout.css';
 import Header from '@/components/layout/header';
+import ToolCategoryNav from '@/components/layout/tool-category-nav';
 import Footer from '@/components/layout/footer';
 import GoogleAnalytics from '@/components/layout/google-analytics';
 import GoogleAdsense from '@/components/layout/google-adsense';
@@ -59,12 +62,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
+    <html lang="ko" className={`${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <head>
+        <script id="kaisa-locale-init" dangerouslySetInnerHTML={{__html: LOCALE_BOOTSTRAP_SCRIPT}} />
         <GoogleAdsense />
       </head>
       <body>
-        <script
+        <script id="kaisa-init-6"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=null;document.cookie.split(';').forEach(function(c){var p=c.trim().split('=');if(p[0]==='${THEME_STORAGE_KEY}')t=decodeURIComponent(p[1]||'');});document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`
           }}
@@ -73,7 +77,7 @@ export default function RootLayout({
         <ThemeProvider />
         <LocaleProvider>
           <Header />
-          <main className="site-main">{children}</main>
+          <main className="site-main"><ToolCategoryNav />{children}</main>
           <Footer />
         </LocaleProvider>
       </body>

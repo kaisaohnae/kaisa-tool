@@ -1,5 +1,10 @@
 import {create} from 'zustand';
-import {getStoredTheme, setThemeCookie, THEME_COOKIE_KEY, type Theme} from '@/etc/theme-cookie';
+import {
+  getStoredTheme,
+  setThemeCookie,
+  THEME_COOKIE_KEY,
+  type Theme,
+} from '@/etc/theme-cookie';
 
 export type {Theme};
 export const THEME_STORAGE_KEY = THEME_COOKIE_KEY;
@@ -23,7 +28,7 @@ const applyTheme = (theme: Theme) => {
 export const useThemeStore = create<State & Actions>((set, get) => ({
   theme: 'light',
   hydrated: false,
-  setTheme: theme => {
+  setTheme: (theme) => {
     applyTheme(theme);
     set({theme});
   },
@@ -35,7 +40,7 @@ export const useThemeStore = create<State & Actions>((set, get) => ({
     const theme = getStoredTheme() ?? 'light';
     applyTheme(theme);
     set({theme, hydrated: true});
-  }
+  },
 }));
 
 export default useThemeStore;

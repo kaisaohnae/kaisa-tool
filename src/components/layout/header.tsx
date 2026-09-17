@@ -1,115 +1,66 @@
 'use client';
-
-import {useEffect, useId, useRef, useState} from 'react';
-import Link from 'next/link';
+import {useEffect, useId, useRef} from 'react';
 import {usePathname} from 'next/navigation';
 import IconLogo from '@/components/icons/icon-logo';
-import ThemeToggle from '@/components/layout/theme-toggle';
-import {useT} from '@/i18n/locale-context';
-
-const MENU_ITEMS = [
-  {href: '/image/compress/', label: 'Image', match: '/image'},
-  {href: '/pdf/compress/', label: 'PDF', match: '/pdf'},
-  {href: '/format/json/', label: 'FORMAT', match: '/format'},
-  {href: '/edit/compare/', label: 'EDIT', match: '/edit'},
-  {href: '/util/password/', label: 'UTIL', match: '/util'},
-  {href: '/photo', label: 'Photo', match: '/photo'}
-];
+import {useHeaderMenuSpacing} from './use-header-menu-spacing';
+import {useSharedMenu} from './use-shared-menu';
+import ThemeToggle from './theme-toggle';
+import {useLocale, useT} from '@/i18n/locale-context';
+import {activeKaisaNav, KAISA_HOME_URL, KAISA_NAV, KAISA_NAV_LABELS} from '@/config/kaisa-navigation';
+import './kaisa-header.css';
 
 export default function Header() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const locale = useLocale();
+  const {open, setOpen} = useSharedMenu();
   const navId = useId();
   const headerRef = useRef<HTMLElement>(null);
-
+  useHeaderMenuSpacing(headerRef, open);
+  const active = activeKaisaNav('tool', pathname);
+  const isWorks = active === 'works';
   useEffect(() => {
-    const onScroll = () => {
-      document.body.classList.toggle('scrolled', window.scrollY > 8);
-    };
+    const onScroll = () => document.body.classList.toggle('scrolled', window.scrollY > 8);
     window.addEventListener('scroll', onScroll, {passive: true});
     onScroll();
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      document.body.classList.remove('scrolled');
-    };
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
   useEffect(() => {
     if (!open) return;
-
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (target && headerRef.current && !headerRef.current.contains(target)) {
-        setOpen(false);
-      }
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) setOpen(false);
     };
-
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
     document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
-
-  const items = MENU_ITEMS.map(item => {
-    const isActive = pathname === item.match || pathname.startsWith(`${item.match}/`);
-    return (
-      <li key={item.href} className={isActive ? 'menu__item menu__item--active' : 'menu__item'}>
-        <Link href={item.href} className={item.match === '/photo' ? 'menu__link menu__link--photo' : 'menu__link'} aria-current={isActive ? 'page' : undefined}>
-          {item.match === '/photo' && (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          )}
-          <span>{t(item.label)}</span>
-        </Link>
-      </li>
-    );
-  });
-
-  const toggle = (
-    <button
-      type="button"
-      className={open ? 'menu__toggle menu__toggle--open' : 'menu__toggle'}
-      aria-expanded={open}
-      aria-controls={navId}
-      aria-label={open ? t('Close menu') : t('Open menu')}
-      onClick={() => setOpen(v => !v)}
-    >
-      <span className="menu__toggle-icon" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </span>
-    </button>
-  );
-
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, setOpen]);
+  const items = KAISA_NAV.map(item => (
+    <li key={item.id} className={active === item.id ? 'kaisa-header__item is-active' : 'kaisa-header__item'}>
+      <a href={item.href} className="kaisa-header__link" aria-current={active === item.id ? 'page' : undefined}>
+        {KAISA_NAV_LABELS[locale][item.id]}
+      </a>
+    </li>
+  ));
   return (
-    <header
-      id="header"
-      ref={headerRef}
-      className={open ? 'header--sub header--nav-open' : 'header--sub'}
-    >
-      <div className="site-shell site-shell--header">
-        <div className="header__top site-shell__inner">
-          <p className="header__logo">
-            <a href="https://kaisa.co.kr" aria-label="Kaisa">
-              <IconLogo width={100} height={42} />
-            </a>
-          </p>
-          <div className="header__actions">
-            <nav className="menu menu--desktop" aria-label={t('Main navigation')}>
-              <ul className="menu__list">{items}</ul>
-            </nav>
+    <header id="header" ref={headerRef} className={`kaisa-header ${isWorks ? 'kaisa-header--works' : ''} ${open ? 'kaisa-header--open' : ''}`}>
+      <div className="kaisa-header__shell">
+        <div className="kaisa-header__top">
+          <a href={KAISA_HOME_URL} className="kaisa-header__logo" aria-label="Kaisa Home"><IconLogo width={100} height={42} /></a>
+          <div className="kaisa-header__actions">
+            <nav className="kaisa-header__desktop" aria-label={t('Main navigation')}><ul className="kaisa-header__list">{items}</ul></nav>
             <ThemeToggle />
-            {toggle}
+            <button type="button" className="kaisa-header__toggle" aria-expanded={open} aria-controls={navId} aria-label={open ? t('Close menu') : t('Open menu')} onClick={() => setOpen(value => !value)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <path d={open ? 'M6 6l12 12M6 18 18 6' : 'M3 6h18M3 12h18M3 18h18'} />
+              </svg>
+            </button>
           </div>
         </div>
-
-        <nav id={navId} className="header__nav" aria-label={t('Mobile navigation')} hidden={!open}>
-          <div className="site-shell__inner header__nav-inner">
-            <ul className="menu__list menu__list--mobile">{items}</ul>
-          </div>
-        </nav>
+        <nav id={navId} className="kaisa-header__mobile" aria-label={t('Mobile navigation')} hidden={!open}><ul className="kaisa-header__list">{items}</ul></nav>
       </div>
     </header>
   );
